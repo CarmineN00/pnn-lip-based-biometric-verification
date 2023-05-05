@@ -1,10 +1,10 @@
 import math
-
 import numpy as np
 import os, glob, cv2
 import mediapipe as mp
 import LipLandmarks as lp
 import csv
+
 from tqdm import tqdm
 
 
@@ -65,8 +65,8 @@ def ottieni_lista_distanze_euclidee(filename):
     return list_of_euclidean_distances
 
 
-def main():
-    with open('dataset.csv', mode='w', newline='') as file:
+def create_csv(csv_filename):
+    with open(csv_filename, mode='w', newline='') as file:
         writer = csv.writer(file)
 
         header_string = []
@@ -87,13 +87,12 @@ def main():
                     res = ottieni_lista_distanze_euclidee(video)
                     # Se necessario, cambiare qui il metodo di prelievo della label
                     video_label = int(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
-                    # print(video_label)
                     if np.shape(res)[0] == 60:
                         res_split = np.array_split(res, 3)
                         for i in range(3):
                             info_row = res_split[i]
-                            writer.writerow(np.append(info_row, video_label))
+                            writer.writerow(np.append(info_row, video_label)) 
 
 
 if __name__ == "__main__":
-    main()
+    create_csv()
