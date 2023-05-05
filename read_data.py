@@ -2,8 +2,12 @@ import math
 import numpy as np
 import os, glob, cv2
 import mediapipe as mp
+import pandas
 import LipLandmarks as lp
 import csv
+from sklearn import datasets
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import scale
 
 from tqdm import tqdm
 
@@ -73,7 +77,7 @@ def create_csv(csv_filename):
         for i in range(20):
             header_string.append("Feature "+str(i))
         header_string.append("Label")
-        writer.writerow(header_string)
+        #writer.writerow(header_string)
 
         os.chdir("Dataset")
         video_dir = os.listdir()
@@ -86,12 +90,30 @@ def create_csv(csv_filename):
                 for video in tqdm(files, desc=directory, ncols=100):
                     res = ottieni_lista_distanze_euclidee(video)
                     # Se necessario, cambiare qui il metodo di prelievo della label
-                    video_label = int(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
+                    video_label = str(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
                     if np.shape(res)[0] == 60:
                         res_split = np.array_split(res, 3)
                         for i in range(3):
                             info_row = res_split[i]
                             writer.writerow(np.append(info_row, video_label)) 
+
+
+def create_df(csv_filename):
+    df = pandas.read_csv(csv_filename)
+
+    x = df.iloc[:, :-1].values
+    y = df['Label'].values
+
+    print(f'Shape X: {np.shape(x)}, Shape Y: {np.shape(y)}')
+
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.3, random_state = 0)
+
+    data = {'x_train': x_train, 
+			'x_test': x_test, 
+			'y_train': y_train, 
+			'y_test': y_test}
+
+    return data
 
 
 if __name__ == "__main__":

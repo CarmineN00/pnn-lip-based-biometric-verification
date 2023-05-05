@@ -71,7 +71,8 @@ if __name__ == '__main__':
 	if not os.path.exists(csv_filename):
 		read_data.create_csv(csv_filename)
 
-	#data = pandas.read_csv(csv_filename)
-
+	data = read_data.create_df(csv_filename)
+	
 	predictions = PNN(data)
+
 	print_metrics(data['y_test'], predictions)
