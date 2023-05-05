@@ -26,8 +26,11 @@ def subset_by_class(data, labels):
 	x_train_subsets = []
 	
 	for l in labels:
+		print(l)
 		indices = np.where(data['y_train'] == l)
+		print(indices)
 		x_train_subsets.append(data['x_train'][indices, :])
+		print(x_train_subsets)
 
 	return x_train_subsets
 
@@ -36,6 +39,7 @@ def PNN(data):
 
 	num_testset = data['x_test'].shape[0]
 	labels = np.unique(data['y_train'])
+	print(data['y_train'])
 	num_class = len(labels)
 
 	sigma = 10
@@ -52,6 +56,8 @@ def PNN(data):
 				rbf(test_point, subset[0], sigma)) / subset[0].shape[0] 
 		
 		predictions[i] = np.argmax(summation_layer)
+
+	#print(np.shape(predictions))
 	
 	return predictions
 
@@ -61,8 +67,8 @@ def print_metrics(y_test, predictions):
 	print('Confusion Matrix')
 	print(confusion_matrix(y_test, predictions))
 	print('Accuracy: {}'.format(accuracy_score(y_test, predictions)))
-	print('Precision: {}'.format(precision_score(y_test, predictions, average = 'micro')))
-	print('Recall: {}'.format(recall_score(y_test, predictions, average = 'micro')))
+	#print('Precision: {}'.format(precision_score(y_test, predictions, average = 'micro')))
+	#print('Recall: {}'.format(recall_score(y_test, predictions, average = 'micro')))
 	
 
 if __name__ == '__main__':
@@ -75,4 +81,4 @@ if __name__ == '__main__':
 	
 	predictions = PNN(data)
 
-	print_metrics(data['y_test'], predictions)
+	#print_metrics(data['y_test'], predictions)

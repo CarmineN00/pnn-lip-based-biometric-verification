@@ -100,11 +100,27 @@ def create_csv(csv_filename):
 
 def create_df(csv_filename):
     df = pandas.read_csv(csv_filename)
+    df.sort_values(by=['Label'])
 
     x = df.iloc[:, :-1].values
     y = df['Label'].values
 
-    print(f'Shape X: {np.shape(x)}, Shape Y: {np.shape(y)}')
+    j = 1
+    last_label = y[0]
+    y[0] = j
+    #print(last_label, "->", y[0])
+
+    for i in range(1, len(y)):
+        to_print = str(y[i])
+        if y[i] == last_label:
+            y[i] = j
+        else:
+            last_label = y[i]
+            j = j+1
+            y[i] = j
+        #print(to_print, "->", y[i])
+        
+    #print(f'Shape X: {np.shape(x)}, Shape Y: {np.shape(y)}')
 
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.3, random_state = 0)
 
