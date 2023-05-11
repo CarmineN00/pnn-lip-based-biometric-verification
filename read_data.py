@@ -5,11 +5,11 @@ import mediapipe as mp
 import pandas
 import LipLandmarks as lp
 import csv
-from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import scale
-
 from tqdm import tqdm
+
+num_frames = 20
 
 
 def ottieni_lista_distanze_euclidee(filename):
@@ -19,7 +19,7 @@ def ottieni_lista_distanze_euclidee(filename):
     cap = cv2.VideoCapture(filename)
 
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    cap.set(cv2.CAP_PROP_POS_FRAMES, total_frames - 4)
+    cap.set(cv2.CAP_PROP_POS_FRAMES, total_frames - num_frames - 1)
 
     ret, frame = cap.read()
 
@@ -75,9 +75,9 @@ def create_csv(csv_filename):
 
         header_string = []
         for i in range(20):
-            header_string.append("Feature "+str(i))
+            header_string.append("Feature " + str(i))
         header_string.append("Label")
-        #writer.writerow(header_string)
+        writer.writerow(header_string)
 
         os.chdir("Dataset")
         video_dir = os.listdir()
@@ -91,21 +91,25 @@ def create_csv(csv_filename):
                     res = ottieni_lista_distanze_euclidee(video)
                     # Se necessario, cambiare qui il metodo di prelievo della label
                     video_label = str(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
-                    if np.shape(res)[0] == 60:
-                        res_split = np.array_split(res, 3)
-                        for i in range(3):
+                    if np.shape(res)[0] == 20 * num_frames:
+                        res_split = np.array_split(res, num_frames)
+                        for i in range(num_frames):
                             info_row = res_split[i]
-                            writer.writerow(np.append(info_row, video_label)) 
+                            writer.writerow(np.append(info_row, video_label))
+        os.chdir("..")
 
 
 def create_df(csv_filename):
+
     df = pandas.read_csv(csv_filename)
     df.sort_values(by=['Label'])
 
     x = df.iloc[:, :-1].values
     y = df['Label'].values
 
-    j = 1
+    #print("Converting...")
+
+    j = 0
     last_label = y[0]
     y[0] = j
     #print(last_label, "->", y[0])
@@ -116,21 +120,36 @@ def create_df(csv_filename):
             y[i] = j
         else:
             last_label = y[i]
-            j = j+1
+            j = j + 1
             y[i] = j
         #print(to_print, "->", y[i])
-        
-    #print(f'Shape X: {np.shape(x)}, Shape Y: {np.shape(y)}')
 
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size = 0.3, random_state = 0)
+    x = scale(x)
 
-    data = {'x_train': x_train, 
-			'x_test': x_test, 
-			'y_train': y_train, 
-			'y_test': y_test}
+    '''print("Shape X:", np.shape(x))
+    print(x)
+
+    print("Shape Y:", np.shape(y))
+    print(y)'''
+
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=0)
+
+    data = {'x_train': x_train,
+            'x_test': x_test,
+            'y_train': y_train,
+            'y_test': y_test}
+
+    '''print("Shape of x_train", np.shape(x_train))
+    print(x_train)
+    print("Shape of y_train", np.shape(y_train))
+    print(y_train)
+    print("Shape of x_test", np.shape(x_test))
+    print(x_test)
+    print("Shape of y_test", np.shape(y_test))
+    print(y_test)'''
 
     return data
 
 
 if __name__ == "__main__":
-    create_csv()
+    create_csv("dataset.csv")
