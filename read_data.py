@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import scale
 from tqdm import tqdm
 
-num_frames = 20
+num_frames = 3
 
 
 def ottieni_lista_distanze_euclidee(filename):
@@ -69,87 +69,90 @@ def ottieni_lista_distanze_euclidee(filename):
     return list_of_euclidean_distances
 
 
-def create_csv(csv_filename):
+def create_csv(csv_filename, directory):
     with open(csv_filename, mode='w', newline='') as file:
         writer = csv.writer(file)
 
         header_string = []
+
         for i in range(20):
             header_string.append("Feature " + str(i))
+
         header_string.append("Label")
         writer.writerow(header_string)
 
-        os.chdir("Dataset")
-        video_dir = os.listdir()
+        if os.path.isdir(directory):
+            files = glob.glob(directory + "/*.avi")
 
-        for directory in video_dir:
-            if os.path.isdir(directory):
-                files = glob.glob(directory + "/*.avi")
+            for video in tqdm(files, desc=directory, ncols=100):
+                res = ottieni_lista_distanze_euclidee(video)
+                video_label = str(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
 
-                # Progress bar
-                for video in tqdm(files, desc=directory, ncols=100):
-                    res = ottieni_lista_distanze_euclidee(video)
-                    # Se necessario, cambiare qui il metodo di prelievo della label
-                    video_label = str(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
-                    if np.shape(res)[0] == 20 * num_frames:
-                        res_split = np.array_split(res, num_frames)
-                        for i in range(num_frames):
-                            info_row = res_split[i]
-                            writer.writerow(np.append(info_row, video_label))
-        os.chdir("..")
+                if np.shape(res)[0] == 20 * num_frames:
+                    res_split = np.array_split(res, num_frames)
+
+                    for i in range(num_frames):
+                        info_row = res_split[i]
+                        writer.writerow(np.append(info_row, video_label))
 
 
-def create_df(csv_filename):
+def create_data(train_csv_filename, test_csv_filename):
+    # Creazione dataframe di training
 
-    df = pandas.read_csv(csv_filename)
-    df.sort_values(by=['Label'])
+    df_train = pandas.read_csv(train_csv_filename)
+    df_train.sort_values(by=['Label'])
 
-    x = df.iloc[:, :-1].values
-    y = df['Label'].values
-
-    #print("Converting...")
+    x_train = df_train.iloc[:, :-1].values
+    y_train = df_train['Label'].values
 
     j = 0
-    last_label = y[0]
-    y[0] = j
-    #print(last_label, "->", y[0])
+    last_label_train = y_train[0]
+    y_train[0] = j
 
-    for i in range(1, len(y)):
-        to_print = str(y[i])
-        if y[i] == last_label:
-            y[i] = j
+    for i in range(1, len(y_train)):
+        if y_train[i] == last_label_train:
+            y_train[i] = j
         else:
-            last_label = y[i]
+            last_label_train = y_train[i]
             j = j + 1
-            y[i] = j
-        #print(to_print, "->", y[i])
+            y_train[i] = j
 
-    x = scale(x)
+    x_train = scale(x_train)
 
-    '''print("Shape X:", np.shape(x))
-    print(x)
+    # Creazione dataframe di test
 
-    print("Shape Y:", np.shape(y))
-    print(y)'''
+    df_test = pandas.read_csv(test_csv_filename)
+    df_test.sort_values(by=['Label'])
 
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=0)
+    x_test = df_test.iloc[:, :-1].values
+    y_test = df_test['Label'].values
 
-    data = {'x_train': x_train,
-            'x_test': x_test,
-            'y_train': y_train,
-            'y_test': y_test}
+    j = 0
+    last_label = y_test[0]
+    y_test[0] = j
 
-    '''print("Shape of x_train", np.shape(x_train))
-    print(x_train)
-    print("Shape of y_train", np.shape(y_train))
-    print(y_train)
-    print("Shape of x_test", np.shape(x_test))
-    print(x_test)
-    print("Shape of y_test", np.shape(y_test))
-    print(y_test)'''
+    for i in range(1, len(y_test)):
+        if y_test[i] == last_label:
+            y_test[i] = j
+        else:
+            last_label = y_test[i]
+            j = j + 1
+            y_test[i] = j
+
+    x_test = scale(x_test)
+
+    # Dictionary che contiene i dati di training e test
+
+    data = {
+        'x_train': x_train,
+        'x_test': x_test,
+        'y_train': y_train,
+        'y_test': y_test
+    }
 
     return data
 
 
 if __name__ == "__main__":
-    create_csv("dataset.csv")
+    create_csv("test_dataset.csv")
+    create_csv("train_dataset.csv")

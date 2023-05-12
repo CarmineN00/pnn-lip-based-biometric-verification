@@ -34,13 +34,17 @@ def subset_by_class(data, labels):
 
 
 def PNN(data):
-
 	num_test_set = data['x_test'].shape[0]
-	#print("num_test_set:", num_test_set)
 
 	labels = np.unique(data['y_train'])
-
+	
 	num_class = len(labels)
+
+	print("Numero di classi", num_class)
+	print("Lunghezza X_TEST", len(data['x_test']))
+	print("Lunghezza Y_TEST", len(data['y_test']))
+	print("Lunghezza X_TRAIN", len(data['x_train']))
+	print("Lunghezza Y_TRAIN", len(data['y_train']))
 
 	sigma = 10
 
@@ -51,7 +55,7 @@ def PNN(data):
 
 	i = 0
 
-	for test_point in tqdm(data['x_test'], desc="Allenando la rete", ncols=100):
+	for test_point in tqdm(data['x_test'], desc="Forecasting", ncols=100):
 		for j, subset in enumerate(x_train_subsets):
 			summation_layer[j] = np.sum(
 				rbf(test_point, subset[0], sigma)) / subset[0].shape[0] 
@@ -67,18 +71,28 @@ def print_metrics(y_test, predictions):
 	print('Confusion Matrix')
 	print(confusion_matrix(y_test, predictions))
 	print('Accuracy: {}'.format(accuracy_score(y_test, predictions)))
-	print('Precision: {}'.format(precision_score(y_test, predictions, average = 'micro')))
-	print('Recall: {}'.format(recall_score(y_test, predictions, average = 'micro')))
+	#print('Precision: {}'.format(precision_score(y_test, predictions, average = 'micro')))
+	#print('Recall: {}'.format(recall_score(y_test, predictions, average = 'micro')))
 	
 
 if __name__ == '__main__':
-	csv_filename = "dataset.csv"
-	
-	if not os.path.exists(csv_filename):
-		read_data.create_csv(csv_filename)
+	train_csv_filename = "train_dataset.csv"
+	test_csv_filename = "test_dataset.csv"
 
-	data = read_data.create_df(csv_filename)
-	
+	train_directory = "Dataset/Train"
+	test_directory = "Dataset/Test"
+
+	# Il dataset viene generato esclusivamente se non presente nella current working directory
+	if not os.path.exists(train_csv_filename) or not os.path.exists(test_csv_filename):
+		# Creazione del dataset di training
+		read_data.create_csv(train_csv_filename, train_directory)
+		# Creazione del dataset di test
+		read_data.create_csv(test_csv_filename, test_directory)
+
+	datasets = [train_csv_filename, test_csv_filename]
+
+	data = read_data.create_data(train_csv_filename, test_csv_filename)
+
 	predictions = PNN(data)
 
 	print_metrics(data['y_test'], predictions)
