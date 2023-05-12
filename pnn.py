@@ -1,5 +1,5 @@
 import numpy as np
-
+import pandas as pd
 import read_data
 import os
 from tqdm import tqdm
@@ -11,7 +11,6 @@ from sklearn.metrics import accuracy_score, \
 
 
 def rbf(centre, x, sigma):
-	
 	centre = centre.reshape(1, -1)
 
 	temp = -np.sum((centre - x) ** 2, axis = 1)
@@ -23,7 +22,6 @@ def rbf(centre, x, sigma):
 
 
 def subset_by_class(data, labels):
-
 	x_train_subsets = []
 	
 	for l in labels:
@@ -36,34 +34,49 @@ def subset_by_class(data, labels):
 def PNN(data):
 	num_test_set = data['x_test'].shape[0]
 
-	labels = np.unique(data['y_train'])
-	
+	labels = np.unique(data['y_train'], axis=0)
+
 	num_class = len(labels)
+
+	print(labels)
 
 	print("Numero di classi", num_class)
 	print("Lunghezza X_TEST", len(data['x_test']))
-	print("Lunghezza Y_TEST", len(data['y_test']))
 	print("Lunghezza X_TRAIN", len(data['x_train']))
-	print("Lunghezza Y_TRAIN", len(data['y_train']))
 
 	sigma = 10
 
 	x_train_subsets = subset_by_class(data, labels)
 
-	summation_layer = np.zeros(num_class)
-	predictions = np.zeros(num_test_set)
+	print(x_train_subsets)
+
+
+
+	#summation_layer = np.zeros(num_class)
+	#predictions = np.zeros(num_test_set)
 
 	i = 0
 
-	for test_point in tqdm(data['x_test'], desc="Forecasting", ncols=100):
-		for j, subset in enumerate(x_train_subsets):
-			summation_layer[j] = np.sum(
-				rbf(test_point, subset[0], sigma)) / subset[0].shape[0] 
-		
-		predictions[i] = np.argmax(summation_layer)
-		i = i + 1
+	#for test_point in tqdm(data['x_test'], desc="Forecasting", ncols=100):
+	#	for j, subset in enumerate(x_train_subsets):
+	#		summation_layer[j] = np.sum(
+	#			rbf(test_point, subset[0], sigma)
+	#		) / subset[0].shape[0] 
+	#
+	#	predictions[i] = np.argmax(summation_layer)
+	#	
+	#	i = i + 1
 	
-	return predictions
+	#return predictions
+
+
+def ohe(y):
+    y_ohe = np.zeros((y.shape[0], np.unique(y).shape[0]))
+    
+    for i in range(y.shape[0]):
+        y_ohe[i, y[i]] = 1
+
+    return y_ohe
 
 
 def print_metrics(y_test, predictions):
@@ -95,4 +108,8 @@ if __name__ == '__main__':
 
 	predictions = PNN(data)
 
-	print_metrics(data['y_test'], predictions)
+	print(type(predictions))
+
+	pd.DataFrame(predictions).to_csv("predictions.csv")
+
+	#print_metrics(data['y_test'], predictions)

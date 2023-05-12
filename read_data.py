@@ -146,11 +146,22 @@ def create_data(train_csv_filename, test_csv_filename):
     data = {
         'x_train': x_train,
         'x_test': x_test,
-        'y_train': y_train,
-        'y_test': y_test
+        'y_train': ohe(y_train),
+        'y_test': ohe(y_test)
     }
 
     return data
+
+
+def ohe(y):
+    y_ohe = np.zeros((y.shape[0], np.unique(y).shape[0]))
+    
+    for i in range(y.shape[0]):
+        y_ohe[i, y[i]] = 1
+
+    pandas.DataFrame(y_ohe).to_csv("ohe_classes.csv")
+
+    return y_ohe
 
 
 if __name__ == "__main__":
