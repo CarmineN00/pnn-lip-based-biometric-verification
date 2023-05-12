@@ -143,14 +143,21 @@ def create_data(train_csv_filename, test_csv_filename):
 
     # Dictionary che contiene i dati di training e test
 
-    data = {
+    forecasting_data = {
         'x_train': x_train,
         'x_test': x_test,
         'y_train': ohe(y_train),
-        'y_test': ohe(y_test)
+        'y_test': ohe(y_test) #1000
     }
 
-    return data
+    metrics_data = {
+        'x_train': x_train,
+        'x_test': x_test,
+        'y_train': y_train,
+        'y_test': y_test #11121
+    }
+
+    return forecasting_data, metrics_data
 
 
 def ohe(y):

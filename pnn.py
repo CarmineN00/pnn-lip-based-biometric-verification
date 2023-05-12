@@ -75,21 +75,14 @@ def PNN(data):
 
 
 def print_metrics(y_test, predictions):
-
+	print("shape y_test", np.shape(y_test))
+	print("shape predictions", np.shape(predictions))
 	print('Confusion Matrix')
-	print(confusion_matrix(y_test, predictions))
+	#print(confusion_matrix(y_test, predictions))
 	print('Accuracy: {}'.format(accuracy_score(y_test, predictions)))
 	#print('Precision: {}'.format(precision_score(y_test, predictions, average = 'micro')))
 	#print('Recall: {}'.format(recall_score(y_test, predictions, average = 'micro')))
 	
-
-def ohe(y):
-    y_ohe = np.zeros((len(y), len(y)))
-    
-    for i in range(y.shape[0]):
-        y_ohe[i, int(y[i])] = 1
-
-    return y_ohe
 
 if __name__ == '__main__':
 	train_csv_filename = "train_dataset.csv"
@@ -107,11 +100,8 @@ if __name__ == '__main__':
 
 	datasets = [train_csv_filename, test_csv_filename]
 
-	data = read_data.create_data(train_csv_filename, test_csv_filename)
+	forecasting_data, metrics_data = read_data.create_data(train_csv_filename, test_csv_filename)
 
-	predictions = PNN(data)
-	ohe_predictions = ohe(predictions)
+	predictions = PNN(forecasting_data)
 
-	pd.DataFrame(ohe_predictions).to_csv("predictions.csv")
-
-	#print_metrics(data['y_test'], ohe_predictions)
+	print_metrics(metrics_data['y_test'], predictions)
