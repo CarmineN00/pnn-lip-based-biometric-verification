@@ -23,9 +23,14 @@ def rbf(centre, x, sigma):
 
 def subset_by_class(data, labels):
 	x_train_subsets = []
-	
+
 	for l in labels:
-		indices = np.where(data['y_train'] == l)
+		indices = []
+
+		for j, row in enumerate(data['y_train']):
+			if np.array_equal(row, l):
+				indices.append(j)
+
 		x_train_subsets.append(data['x_train'][indices, :])
 
 	return x_train_subsets
@@ -38,7 +43,7 @@ def PNN(data):
 
 	num_class = len(labels)
 
-	print(labels)
+	#print(labels)
 
 	print("Numero di classi", num_class)
 	print("Lunghezza X_TEST", len(data['x_test']))
@@ -48,35 +53,25 @@ def PNN(data):
 
 	x_train_subsets = subset_by_class(data, labels)
 
-	print(x_train_subsets)
+	#print(x_train_subsets)
 
-
-
-	#summation_layer = np.zeros(num_class)
-	#predictions = np.zeros(num_test_set)
+	summation_layer = np.zeros(num_class)
+	predictions = np.zeros(num_test_set)
 
 	i = 0
 
-	#for test_point in tqdm(data['x_test'], desc="Forecasting", ncols=100):
-	#	for j, subset in enumerate(x_train_subsets):
-	#		summation_layer[j] = np.sum(
-	#			rbf(test_point, subset[0], sigma)
-	#		) / subset[0].shape[0] 
-	#
-	#	predictions[i] = np.argmax(summation_layer)
-	#	
-	#	i = i + 1
+	for test_point in tqdm(data['x_test'], desc="Forecasting", ncols=100):
+		for j, subset in enumerate(x_train_subsets):
+			summation_layer[j] = np.sum(
+				rbf(test_point, subset[0], sigma)
+			) / subset[0].shape[0] 
 	
-	#return predictions
+		predictions[i] = np.argmax(summation_layer)
+		
+		i = i + 1
+	
+	return predictions
 
-
-def ohe(y):
-    y_ohe = np.zeros((y.shape[0], np.unique(y).shape[0]))
-    
-    for i in range(y.shape[0]):
-        y_ohe[i, y[i]] = 1
-
-    return y_ohe
 
 
 def print_metrics(y_test, predictions):
@@ -87,6 +82,14 @@ def print_metrics(y_test, predictions):
 	#print('Precision: {}'.format(precision_score(y_test, predictions, average = 'micro')))
 	#print('Recall: {}'.format(recall_score(y_test, predictions, average = 'micro')))
 	
+
+def ohe(y):
+    y_ohe = np.zeros((y.shape[0], np.unique(y).shape[0]))
+    
+    for i in range(y.shape[0]):
+        y_ohe[i, y[i]] = 1
+
+    return y_ohe
 
 if __name__ == '__main__':
 	train_csv_filename = "train_dataset.csv"
@@ -108,8 +111,6 @@ if __name__ == '__main__':
 
 	predictions = PNN(data)
 
-	print(type(predictions))
-
 	pd.DataFrame(predictions).to_csv("predictions.csv")
 
-	#print_metrics(data['y_test'], predictions)
+	print_metrics(data['y_test'], ohe(predictions))
