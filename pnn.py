@@ -84,10 +84,10 @@ def print_metrics(y_test, predictions):
 	
 
 def ohe(y):
-    y_ohe = np.zeros((y.shape[0], np.unique(y).shape[0]))
+    y_ohe = np.zeros((len(y), len(y)))
     
     for i in range(y.shape[0]):
-        y_ohe[i, y[i]] = 1
+        y_ohe[i, int(y[i])] = 1
 
     return y_ohe
 
@@ -110,7 +110,8 @@ if __name__ == '__main__':
 	data = read_data.create_data(train_csv_filename, test_csv_filename)
 
 	predictions = PNN(data)
+	ohe_predictions = ohe(predictions)
 
-	pd.DataFrame(predictions).to_csv("predictions.csv")
+	pd.DataFrame(ohe_predictions).to_csv("predictions.csv")
 
-	print_metrics(data['y_test'], ohe(predictions))
+	#print_metrics(data['y_test'], ohe_predictions)
