@@ -10,7 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import scale
 from tqdm import tqdm
 
-num_frames = 17
+num_frames = 20
 
 def create_hashmap_from_ugly_labels_to_numbers(list):
     hashmap = {}
@@ -95,10 +95,10 @@ def create_data_correctly(train_csv_filename, test_csv_filename):
         'y_train_before_ohe': y_train
     }
 
-    print("Shape of data['x_train']:", np.shape(data['x_train']))
+    '''print("Shape of data['x_train']:", np.shape(data['x_train']))
     print("Shape of data['x_test']:", np.shape(data['x_test']))
     print("Shape of data['y_train']:", np.shape(data['y_train']))
-    print("Shape of data['y_test']:", np.shape(data['y_test']))
+    print("Shape of data['y_test']:", np.shape(data['y_test']))'''
 
     return data
 

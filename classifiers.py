@@ -4,7 +4,7 @@ from sklearn.model_selection import GridSearchCV
 import read_data
 from sklearn import svm
 
-estimator = "svc"
+estimator = "rf"
 
 if __name__ == '__main__':
     train_csv_filename = "train_dataset.csv"
@@ -33,12 +33,12 @@ if __name__ == '__main__':
     elif estimator == "rf":
         print("Random Forest")
         current_params = {
-            'n_estimators': [48],
-            'max_features': ['auto'],
-            'max_depth': [4],
-            'min_samples_split': [5],
-            'min_samples_leaf': [2],
-            'bootstrap': [True]
+            'n_estimators': [48,80],
+            'max_features': ['auto','sqrt'],
+            'max_depth': [2,4],
+            'min_samples_split': [2,5],
+            'min_samples_leaf': [1,2],
+            'bootstrap': [True, False]
         }
         random_forest = RandomForestClassifier()
         current_estimator = random_forest

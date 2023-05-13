@@ -24,7 +24,7 @@ def rbf(centre, x, sigma):
 def subset_by_class(data, labels):
 	x_train_subsets = []
 
-	for l in labels:
+	for l in tqdm(labels, desc="Subset_by_class", ncols=100):
 
 		#Per ogni riga in data y train, verificare se tale riga è uguale alla l corrente
 		#In esito positivo, inserire l'indice della riga in indices
@@ -62,15 +62,15 @@ def PNN(data):
  
 	num_class = len(labels)
 
-	print("Num classes: ",num_class)
+	#print("Num classes: ",num_class)
 
 	sigma = 10
 
 	x_train_subsets = subset_by_class(data, labels)
 
-	print("Lenght of x_train_subsets: ",len(x_train_subsets))
-	for a,subset in enumerate(x_train_subsets):
-		print("Subset ", a, "has shape: ",np.shape(subset))
+	#print("Lenght of x_train_subsets: ",len(x_train_subsets))
+	#for a,subset in enumerate(x_train_subsets):
+		#print("Subset ", a, "has shape: ",np.shape(subset))
 
 	summation_layer = np.zeros(num_class)
 	predictions = np.zeros(num_test_set)
@@ -137,7 +137,7 @@ if __name__ == '__main__':
 
 	predictions = PNN(data)
 
-	print(type(predictions))
+	#print(type(predictions))
 
 	pd.DataFrame(predictions).to_csv("predictions.csv")
 
