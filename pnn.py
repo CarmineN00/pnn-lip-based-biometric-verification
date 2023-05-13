@@ -25,12 +25,16 @@ def subset_by_class(data, labels):
 	x_train_subsets = []
 
 	for l in labels:
+
+		#Per ogni riga in data y train, verificare se tale riga è uguale alla l corrente
+		#In esito positivo, inserire l'indice della riga in indices
+
 		indices = []
-
 		for j, row in enumerate(data['y_train']):
-			if np.array_equal(row, l):
+			if (np.array_equal(row,l)):
 				indices.append(j)
-
+		
+		# print("\n\nPer la label", l, " gli indici sono:", indices)
 		x_train_subsets.append(data['x_train'][indices, :])
 
 	return x_train_subsets
@@ -39,21 +43,34 @@ def subset_by_class(data, labels):
 def PNN(data):
 	num_test_set = data['x_test'].shape[0]
 
-	labels = np.unique(data['y_train'], axis=0)
+	#Anche questo va modificato, perchè non è detto che in y_train ci sia almeno un sample di tutte e 256 persone
+	# labels = np.unique(data['y_train'], axis=0)
 
+	labels = []
+
+	# Inizializza una matrice vuota per contenere i vettori one-hot-encoded
+	one_hot_matrix = np.zeros((256, 256))
+
+	# Genera i vettori one-hot-encoded
+	for i in range(256):
+		one_hot_matrix[i][i] = 1
+
+	for row in one_hot_matrix:
+		labels.append(list(row))
+	
+	#print(labels)
+ 
 	num_class = len(labels)
 
-	#print(labels)
-
-	print("Numero di classi", num_class)
-	print("Lunghezza X_TEST", len(data['x_test']))
-	print("Lunghezza X_TRAIN", len(data['x_train']))
+	print("Num classes: ",num_class)
 
 	sigma = 10
 
 	x_train_subsets = subset_by_class(data, labels)
 
-	#print(x_train_subsets)
+	print("Lenght of x_train_subsets: ",len(x_train_subsets))
+	for a,subset in enumerate(x_train_subsets):
+		print("Subset ", a, "has shape: ",np.shape(subset))
 
 	summation_layer = np.zeros(num_class)
 	predictions = np.zeros(num_test_set)
@@ -61,10 +78,20 @@ def PNN(data):
 	i = 0
 
 	for test_point in tqdm(data['x_test'], desc="Forecasting", ncols=100):
+		#print("Test point",i," shape: ",np.shape(test_point))
 		for j, subset in enumerate(x_train_subsets):
-			summation_layer[j] = np.sum(
+			if (np.shape(subset)[0] != 0):
+				dim0 = np.shape(subset)[0]
+				dim1 = np.shape(subset)[1]
+				subset = subset.reshape((1,dim0,dim1))
+				#print("\tNEW subset ",j," shape: ",np.shape(subset))
+				summation_layer[j] = np.sum(
 				rbf(test_point, subset[0], sigma)
-			) / subset[0].shape[0] 
+			) / subset[0].shape[0]
+			else:
+				#print("\tSubset shape", j, "shape: ", np.shape(subset))
+				summation_layer[j] = 0
+			#print("Summation layer ", j, ": ", summation_layer[j])
 	
 		predictions[i] = np.argmax(summation_layer)
 		
@@ -75,9 +102,10 @@ def PNN(data):
 
 
 def print_metrics(y_test, predictions):
-	print("shape y_test", np.shape(y_test))
-	print("shape predictions", np.shape(predictions))
-	print('Confusion Matrix')
+	print("Y test:", np.shape(y_test))
+	print("Predictions: ",np.shape(predictions))
+
+	#print('Confusion Matrix')
 	#print(confusion_matrix(y_test, predictions))
 	print('Accuracy: {}'.format(accuracy_score(y_test, predictions)))
 	#print('Precision: {}'.format(precision_score(y_test, predictions, average = 'micro')))
@@ -85,6 +113,11 @@ def print_metrics(y_test, predictions):
 	
 
 if __name__ == '__main__':
+
+	##########################################################################
+	# OGNI METODO DI READ_DATA DEVE ORA ESSERE CHIAMATO DA read_data #
+	##########################################################################
+
 	train_csv_filename = "train_dataset.csv"
 	test_csv_filename = "test_dataset.csv"
 
@@ -100,8 +133,12 @@ if __name__ == '__main__':
 
 	datasets = [train_csv_filename, test_csv_filename]
 
-	forecasting_data, metrics_data = read_data.create_data(train_csv_filename, test_csv_filename)
+	data = read_data.create_data_correctly(train_csv_filename, test_csv_filename)
 
-	predictions = PNN(forecasting_data)
+	predictions = PNN(data)
 
-	print_metrics(metrics_data['y_test'], predictions)
+	print(type(predictions))
+
+	pd.DataFrame(predictions).to_csv("predictions.csv")
+
+	print_metrics(data['y_test_before_ohe'], predictions)

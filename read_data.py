@@ -1,6 +1,7 @@
-import math
+import pandas
 import numpy as np
 import os, glob, cv2
+import math
 import mediapipe as mp
 import pandas
 import LipLandmarks as lp
@@ -9,7 +10,97 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import scale
 from tqdm import tqdm
 
-num_frames = 3
+num_frames = 17
+
+def create_hashmap_from_ugly_labels_to_numbers(list):
+    hashmap = {}
+    i = 0
+    for elem in list:
+        if hashmap.get(elem) is None:
+            hashmap[elem] = i
+            i = i+1
+    return hashmap
+
+def ohe_correct(y, width):
+    y_ohe = np.zeros((y.shape[0], width))
+    
+    for i in range(y.shape[0]):
+        y_ohe[i, y[i]] = 1
+
+    pandas.DataFrame(y_ohe).to_csv("ohe_classes.csv")
+
+    return y_ohe
+
+def get_labels(directories):
+    video_label_list = []
+    for directory in directories:
+        if os.path.isdir(directory):
+            files = glob.glob(directory + "/*.avi")
+            for video in files:
+               video_label = str(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
+               video_label_list.append(video_label)
+    return video_label_list
+
+def create_data_correctly(train_csv_filename, test_csv_filename):
+    #Ottengo tutte le possibili label, anche con ripetizioni
+    video_label_list = get_labels(["Dataset/Test", "Dataset/Train"])
+
+    #Determino quante distinte persone ci sono in tutte le cartelle
+    num_distinct_people = len(np.unique(video_label_list))
+    print("\nNumero reali individui distinti: ",num_distinct_people)
+
+    #Creo una hashmap che associa ad ogni label vecchia un numero da 0 a 255
+    hashmap = create_hashmap_from_ugly_labels_to_numbers(video_label_list)
+    #print("\nHashMap\n", hashmap)
+
+    #Prendo il dataset train e converto le y dalle label vecchie ad rispettivo id da 0 a 255
+    df_train = pandas.read_csv("train_dataset.csv")
+    x_train = df_train.iloc[:, :-1].values
+    y_train = df_train['Label'].values
+
+    #print("Before converting y_train: ", y_train)
+
+    for j in range (len(y_train)):
+        #print(y_train[j], "->", hashmap[str(y_train[j])])
+        y_train[j] = hashmap[str(y_train[j])]
+
+    #print("After converting y_train: ", y_train)
+
+    #Ora, la stessa conversione anche per il dataset test
+
+    df_test = pandas.read_csv("test_dataset.csv")
+    df_test.sort_values(by=['Label'])
+
+    x_test = df_test.iloc[:, :-1].values
+    y_test = df_test['Label'].values
+
+    #print("Before converting y_test: ", y_test)
+
+    for j in range (len(y_test)):
+        #print(y_test[j], "->", hashmap[str(y_test[j])])
+        y_test[j] = hashmap[str(y_test[j])]
+
+    #print("After converting y_test: ", y_test)
+
+    # Ora e soltanto ora possiamo usare il one-hot-encoding!
+
+    data = {
+        'x_train': scale(x_train),
+        'x_test': scale(x_test),
+        'y_train': ohe_correct(y_train, num_distinct_people),
+        'y_test': ohe_correct(y_test, num_distinct_people),
+        #Nel caso dovesse servire, fornisco anche la hashmap
+        'hashmap': hashmap,
+        'y_test_before_ohe': y_test,
+        'y_train_before_ohe': y_train
+    }
+
+    print("Shape of data['x_train']:", np.shape(data['x_train']))
+    print("Shape of data['x_test']:", np.shape(data['x_test']))
+    print("Shape of data['y_train']:", np.shape(data['y_train']))
+    print("Shape of data['y_test']:", np.shape(data['y_test']))
+
+    return data
 
 
 def ottieni_lista_distanze_euclidee(filename):
@@ -68,7 +159,6 @@ def ottieni_lista_distanze_euclidee(filename):
 
     return list_of_euclidean_distances
 
-
 def create_csv(csv_filename, directory):
     with open(csv_filename, mode='w', newline='') as file:
         writer = csv.writer(file)
@@ -94,83 +184,11 @@ def create_csv(csv_filename, directory):
                     for i in range(num_frames):
                         info_row = res_split[i]
                         writer.writerow(np.append(info_row, video_label))
-
-
-def create_data(train_csv_filename, test_csv_filename):
-    # Creazione dataframe di training
-
-    df_train = pandas.read_csv(train_csv_filename)
-    df_train.sort_values(by=['Label'])
-
-    x_train = df_train.iloc[:, :-1].values
-    y_train = df_train['Label'].values
-
-    j = 0
-    last_label_train = y_train[0]
-    y_train[0] = j
-
-    for i in range(1, len(y_train)):
-        if y_train[i] == last_label_train:
-            y_train[i] = j
-        else:
-            last_label_train = y_train[i]
-            j = j + 1
-            y_train[i] = j
-
-    x_train = scale(x_train)
-
-    # Creazione dataframe di test
-
-    df_test = pandas.read_csv(test_csv_filename)
-    df_test.sort_values(by=['Label'])
-
-    x_test = df_test.iloc[:, :-1].values
-    y_test = df_test['Label'].values
-
-    j = 0
-    last_label = y_test[0]
-    y_test[0] = j
-
-    for i in range(1, len(y_test)):
-        if y_test[i] == last_label:
-            y_test[i] = j
-        else:
-            last_label = y_test[i]
-            j = j + 1
-            y_test[i] = j
-
-    x_test = scale(x_test)
-
-    # Dictionary che contiene i dati di training e test
-
-    forecasting_data = {
-        'x_train': x_train,
-        'x_test': x_test,
-        'y_train': ohe(y_train),
-        'y_test': ohe(y_test) #1000
-    }
-
-    metrics_data = {
-        'x_train': x_train,
-        'x_test': x_test,
-        'y_train': y_train,
-        'y_test': y_test #11121
-    }
-
-    return forecasting_data, metrics_data
-
-
-def ohe(y):
-    y_ohe = np.zeros((y.shape[0], np.unique(y).shape[0]))
-    
-    for i in range(y.shape[0]):
-        y_ohe[i, y[i]] = 1
-
-    pandas.DataFrame(y_ohe).to_csv("ohe_classes.csv")
-
-    return y_ohe
-
+                '''else:
+                    print("Failed to fetch lip features from video: ",video)'''
 
 if __name__ == "__main__":
-    create_csv("test_dataset.csv")
-    create_csv("train_dataset.csv")
+    create_csv("test_dataset.csv", "Dataset/Test")
+    create_csv("train_dataset.csv", "Dataset/Train")
+    create_data_correctly("train_dataset.csv", "test_dataset.csv")
+
