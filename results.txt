@@ -1,0 +1,105 @@
+
+Kernel: rbf
+Metric: DistanzeEuclidee2D
+Accuracy: 0.1484189723320158
+Precision: 0.654496487780876
+Recall: 0.15509803921568627
+
+
+Kernel: rbf
+Metric: DistanzeEuclideeNormalizzate2D
+Accuracy: 0.06897233201581028
+Precision: 0.8052519942335796
+Recall: 0.0689723320158103
+
+
+Kernel: rbf
+Metric: CityBlock3D
+Accuracy: 0.10790513833992095
+Precision: 0.6722371111314585
+Recall: 0.11490196078431371
+
+
+Kernel: laplacian
+Metric: DistanzeEuclidee2D
+Accuracy: 0.15711462450592886
+Precision: 0.6189702065353818
+Recall: 0.16372549019607843
+
+
+Kernel: laplacian
+Metric: DistanzeEuclideeNormalizzate2D
+Accuracy: 0.07470355731225296
+Precision: 0.7710092837785634
+Recall: 0.07470355731225296
+
+
+Kernel: laplacian
+Metric: CityBlock3D
+Accuracy: 0.13102766798418972
+Precision: 0.6507390106611486
+Recall: 0.137843137254902
+
+
+Kernel: uniform
+Metric: DistanzeEuclidee2D
+Accuracy: 0.04426877470355731
+Precision: 0.7256724208319038
+Recall: 0.04803149606299214
+
+
+Kernel: uniform
+Metric: DistanzeEuclideeNormalizzate2D
+Accuracy: 0.003952569169960474
+Precision: 0.9960630536330829
+Recall: 0.003952569169960474
+
+
+Kernel: uniform
+Metric: CityBlock3D
+Accuracy: 0.003952569169960474
+Precision: 0.9960630536330829
+Recall: 0.003952569169960474
+
+
+Kernel: epanechnikov
+Metric: DistanzeEuclidee2D
+Accuracy: 0.14861660079051384
+Precision: 0.6128865225047719
+Recall: 0.1552941176470588
+
+
+Kernel: epanechnikov
+Metric: DistanzeEuclideeNormalizzate2D
+Accuracy: 0.06897233201581028
+Precision: 0.8052519942335796
+Recall: 0.0689723320158103
+
+
+Kernel: epanechnikov
+Metric: CityBlock3D
+Accuracy: 0.10790513833992095
+Precision: 0.6722371111314585
+Recall: 0.11490196078431371
+
+
+Kernel: triangle
+Metric: DistanzeEuclidee2D
+Accuracy: 0.15849802371541502
+Precision: 0.5642083976952361
+Recall: 0.16509803921568625
+
+
+Kernel: triangle
+Metric: DistanzeEuclideeNormalizzate2D
+Accuracy: 0.07470355731225296
+Precision: 0.771610094424091
+Recall: 0.07470355731225296
+
+
+Kernel: triangle
+Metric: CityBlock3D
+Accuracy: 0.13102766798418972
+Precision: 0.6507545724414163
+Recall: 0.137843137254902
+

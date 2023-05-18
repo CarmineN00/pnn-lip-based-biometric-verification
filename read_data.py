@@ -10,8 +10,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import scale
 from tqdm import tqdm
 
-num_frames = 20
-
 def create_hashmap_from_ugly_labels_to_numbers(list):
     hashmap = {}
     i = 0
@@ -52,18 +50,18 @@ def get_labels(csvs):
 
 def create_data_correctly(train_csv_filename, test_csv_filename):
     #Ottengo tutte le possibili label, anche con ripetizioni
-    video_label_list = get_labels(["test_dataset.csv","train_dataset.csv"])
+    video_label_list = get_labels([train_csv_filename,test_csv_filename])
 
     #Determino quante distinte persone ci sono in tutte le cartelle
     num_distinct_people = len(np.unique(video_label_list))
-    print("\nNumero reali individui distinti: ",num_distinct_people)
+    #print("\nNumero reali individui distinti: ",num_distinct_people)
 
     #Creo una hashmap che associa ad ogni label vecchia un numero da 0 a 255
     hashmap = create_hashmap_from_ugly_labels_to_numbers(video_label_list)
     #print("\nHashMap\n", hashmap)
 
     #Prendo il dataset train e converto le y dalle label vecchie ad rispettivo id da 0 a 255
-    df_train = pandas.read_csv("train_dataset.csv")
+    df_train = pandas.read_csv(train_csv_filename)
     x_train = df_train.iloc[:, :-1].values
     y_train = df_train['Label'].values
 
@@ -77,7 +75,7 @@ def create_data_correctly(train_csv_filename, test_csv_filename):
 
     #Ora, la stessa conversione anche per il dataset test
 
-    df_test = pandas.read_csv("test_dataset.csv")
+    df_test = pandas.read_csv(test_csv_filename)
     df_test.sort_values(by=['Label'])
 
     x_test = df_test.iloc[:, :-1].values
@@ -94,8 +92,8 @@ def create_data_correctly(train_csv_filename, test_csv_filename):
     # Ora e soltanto ora possiamo usare il one-hot-encoding!
 
     data = {
-        'x_train': scale(x_train),
-        'x_test': scale(x_test),
+        'x_train': x_train,
+        'x_test': x_test,
         'y_train': ohe_correct(y_train, num_distinct_people),
         'y_test': ohe_correct(y_test, num_distinct_people),
         #Nel caso dovesse servire, fornisco anche la hashmap
@@ -104,15 +102,9 @@ def create_data_correctly(train_csv_filename, test_csv_filename):
         'y_train_before_ohe': y_train
     }
 
-    '''print("Shape of data['x_train']:", np.shape(data['x_train']))
-    print("Shape of data['x_test']:", np.shape(data['x_test']))
-    print("Shape of data['y_train']:", np.shape(data['y_train']))
-    print("Shape of data['y_test']:", np.shape(data['y_test']))'''
-
     return data
 
-
-def ottieni_lista_distanze_euclidee(filename):
+def ottieni_features_da_video(filename,type, num_frames):
     mp_face_mesh = mp.solutions.face_mesh
     face_mesh = mp_face_mesh.FaceMesh()
 
@@ -122,8 +114,6 @@ def ottieni_lista_distanze_euclidee(filename):
     cap.set(cv2.CAP_PROP_POS_FRAMES, total_frames - num_frames - 1)
 
     ret, frame = cap.read()
-
-    landmarks = []
 
     list_of_euclidean_distances = []
 
@@ -142,33 +132,34 @@ def ottieni_lista_distanze_euclidee(filename):
         for j in range(0, len(lp.lip_landmarks)):
             i = next(iterator)
 
-            '''
-                Non è detto che da un video sia sempre possibile 
-                fare detection di almeno un volto, quindi questo 
-                controllo è strettamente necessario
-            '''
             if results and results.multi_face_landmarks:
                 # Primo elemento della tupla
-                point = results.multi_face_landmarks[0].landmark[i[0]]
-                node1_x = int(point.x * width)
-                node1_y = int(point.y * height)
-                landmarks.append((node1_x, node1_y))
-                cv2.circle(frame, (node1_x, node1_y), 2, (255, 255, 255), -1)
+                point1 = results.multi_face_landmarks[0].landmark[i[0]]
+                node1_x = int(point1.x * width)
+                node1_y = int(point1.y * height)
+                if (type == "DistanzeEuclidee2D"):
+                    cv2.circle(frame, (node1_x, node1_y), 2, (255, 255, 255), -1)
 
                 # Secondo elemento della tupla
-                point = results.multi_face_landmarks[0].landmark[i[1]]
-                node2_x = int(point.x * width)
-                node2_y = int(point.y * height)
-                landmarks.append((node2_x, node2_y))
-                cv2.circle(frame, (node2_x, node2_y), 2, (255, 255, 255), -1)
+                point2 = results.multi_face_landmarks[0].landmark[i[1]]
+                node2_x = int(point2.x * width)
+                node2_y = int(point2.y * height)
+                if (type == "DistanzeEuclidee2D"):
+                    cv2.circle(frame, (node2_x, node2_y), 2, (255, 255, 255), -1)
 
                 # Calcolo della distanza euclidea tra i punti
-                d = math.sqrt((node2_x - node1_x) ** 2 + (node2_y - node1_y) ** 2)
+                if (type == "DistanzeEuclidee2D"):
+                    d = math.sqrt((node2_x - node1_x) ** 2 + (node2_y - node1_y) ** 2)
+                elif (type == "DistanzeEuclideeNormalizzate2D"):
+                    d = math.sqrt((point2.x - point1.y) ** 2 + (point2.y - point1.y) ** 2)
+                elif (type == "CityBlock3D"):
+                    d = abs(point1.x - point2.x) + abs(point1.y - point2.y) + abs(point1.z - point2.z)
+
                 list_of_euclidean_distances.append(d)
 
     return list_of_euclidean_distances
 
-def create_csv(csv_filename, directory):
+def create_csv(csv_filename, directory, type, num_frames):
     with open(csv_filename, mode='w', newline='') as file:
         writer = csv.writer(file)
 
@@ -184,7 +175,7 @@ def create_csv(csv_filename, directory):
             files = glob.glob(directory + "/*.avi")
 
             for video in tqdm(files, desc=directory, ncols=100):
-                res = ottieni_lista_distanze_euclidee(video)
+                res = ottieni_features_da_video(video,type, num_frames)
                 video_label = str(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
 
                 if np.shape(res)[0] == 20 * num_frames:
@@ -197,7 +188,5 @@ def create_csv(csv_filename, directory):
                     print("Failed to fetch lip features from video: ",video)'''
 
 if __name__ == "__main__":
-    '''create_csv("test_dataset.csv", "Dataset/Test")
-    create_csv("train_dataset.csv", "Dataset/Train")'''
     create_data_correctly("train_dataset.csv", "test_dataset.csv")
 

@@ -130,6 +130,7 @@ def PNN(data, kernel_name):
 
 	#Anche questo va modificato, perchè non è detto che in y_train ci sia almeno un sample di tutte e 256 persone
 	# labels = np.unique(data['y_train'], axis=0)
+
 	labels = []
 
 	# Inizializza una matrice vuota per contenere i vettori one-hot-encoded
@@ -141,9 +142,9 @@ def PNN(data, kernel_name):
 
 	for row in one_hot_matrix:
 		labels.append(list(row))
-
+	
 	#print(labels)
-
+ 
 	num_class = len(labels)
 
 	#print("Num classes: ",num_class)
@@ -183,24 +184,34 @@ def PNN(data, kernel_name):
 				#print("\tSubset shape", j, "shape: ", np.shape(subset))
 				summation_layer[j] = 0
 			#print("Summation layer ", j, ": ", summation_layer[j])
-
+	
 		predictions[i] = np.argmax(summation_layer)
 		
 		i = i + 1
-
+	
 	return predictions
 
 
 
 def print_metrics(y_test, predictions):
-	print("Y test:", np.shape(y_test))
-	print("Predictions: ",np.shape(predictions))
+	#print("Y test:", np.shape(y_test))
+	#print("Predictions: ",np.shape(predictions))
 
 	#print('Confusion Matrix')
 	#print(confusion_matrix(y_test, predictions))
-	print('Accuracy: {}'.format(accuracy_score(y_test, predictions)))
+	#print('Accuracy: {}'.format(accuracy_score(y_test, predictions)))
+	#print('Precision: {}'.format(precision_score(y_test, predictions, average='macro', zero_division=1)))
+	#print('Recall: {}'.format(recall_score(y_test, predictions, average='macro', zero_division=1)))
 	#print('Precision: {}'.format(precision_score(y_test, predictions, average = 'micro')))
 	#print('Recall: {}'.format(recall_score(y_test, predictions, average = 'micro')))
+
+	scores = {
+		"accuracy": accuracy_score(y_test, predictions),
+		"precision": precision_score(y_test, predictions, average='macro', zero_division=1),
+		"recall": recall_score(y_test, predictions, average='macro', zero_division=1)
+	}
+
+	return scores
 	
 
 if __name__ == '__main__':
@@ -215,18 +226,21 @@ if __name__ == '__main__':
 	train_directory = "Dataset/Train"
 	test_directory = "Dataset/Test"
 
+	kernel = "rbf"
+	num_frames = "20"
+
 	# Il dataset viene generato esclusivamente se non presente nella current working directory
 	if not os.path.exists(train_csv_filename) or not os.path.exists(test_csv_filename):
 		# Creazione del dataset di training
-		read_data.create_csv(train_csv_filename, train_directory)
+		read_data.create_csv(train_csv_filename, train_directory, kernel, num_frames)
 		# Creazione del dataset di test
-		read_data.create_csv(test_csv_filename, test_directory)
+		read_data.create_csv(test_csv_filename, test_directory, kernel, num_frames)
 
 	datasets = [train_csv_filename, test_csv_filename]
 
 	data = read_data.create_data_correctly(train_csv_filename, test_csv_filename)
 
-	predictions = PNN(data,"triangle")
+	predictions = PNN(data, kernel)
 
 	#print(type(predictions))
 
