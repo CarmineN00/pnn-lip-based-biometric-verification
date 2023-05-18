@@ -31,7 +31,7 @@ def ohe_correct(y, width):
 
     return y_ohe
 
-def get_labels(directories):
+def old_get_labels(directories):
     video_label_list = []
     for directory in directories:
         if os.path.isdir(directory):
@@ -41,9 +41,18 @@ def get_labels(directories):
                video_label_list.append(video_label)
     return video_label_list
 
+def get_labels(csvs):
+    video_labels = []
+    for csv in csvs:
+        df_train = pandas.read_csv(csv)
+        y_train = df_train['Label'].values
+        for elem in y_train:
+            video_labels.append(elem)
+    return video_labels
+
 def create_data_correctly(train_csv_filename, test_csv_filename):
     #Ottengo tutte le possibili label, anche con ripetizioni
-    video_label_list = get_labels(["Dataset/Test", "Dataset/Train"])
+    video_label_list = get_labels(["test_dataset.csv","train_dataset.csv"])
 
     #Determino quante distinte persone ci sono in tutte le cartelle
     num_distinct_people = len(np.unique(video_label_list))
@@ -62,7 +71,7 @@ def create_data_correctly(train_csv_filename, test_csv_filename):
 
     for j in range (len(y_train)):
         #print(y_train[j], "->", hashmap[str(y_train[j])])
-        y_train[j] = hashmap[str(y_train[j])]
+        y_train[j] = hashmap[y_train[j]]
 
     #print("After converting y_train: ", y_train)
 
@@ -78,7 +87,7 @@ def create_data_correctly(train_csv_filename, test_csv_filename):
 
     for j in range (len(y_test)):
         #print(y_test[j], "->", hashmap[str(y_test[j])])
-        y_test[j] = hashmap[str(y_test[j])]
+        y_test[j] = hashmap[y_test[j]]
 
     #print("After converting y_test: ", y_test)
 
@@ -188,7 +197,7 @@ def create_csv(csv_filename, directory):
                     print("Failed to fetch lip features from video: ",video)'''
 
 if __name__ == "__main__":
-    create_csv("test_dataset.csv", "Dataset/Test")
-    create_csv("train_dataset.csv", "Dataset/Train")
+    '''create_csv("test_dataset.csv", "Dataset/Test")
+    create_csv("train_dataset.csv", "Dataset/Train")'''
     create_data_correctly("train_dataset.csv", "test_dataset.csv")
 

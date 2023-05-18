@@ -107,3 +107,14 @@ print("Shape of y_train_clean_ohe:", np.shape(y_train_clean_ohe))
 
 # x_test_clean, x_train_clean, y_test_clean_ohe e y_train_clean_ohe sono i dati che devono essere passati alla PNN, CORRETTI!
 
+def get_labels(csvs):
+    video_labels = []
+    for csv in csvs:
+        df_train = pandas.read_csv(csv)
+        y_train = df_train['Label'].values
+        for elem in y_train:
+            video_labels.append(elem)
+    return video_labels
+
+test_video_labels = get_labels(["test_dataset.csv","train_dataset.csv"])
+print(test_video_labels)
