@@ -11,14 +11,99 @@ from sklearn.metrics import accuracy_score, \
 
 
 def rbf(centre, x, sigma):
-	centre = centre.reshape(1, -1)
+    # Ridimensiona l'array 'centre' in una matrice bidimensionale con forma (1, n),
+    # dove n è il numero di elementi nel vettore 'centre'.
+    centre = centre.reshape(1, -1)
 
-	temp = -np.sum((centre - x) ** 2, axis = 1)
-	temp = temp / (2 * sigma * sigma)
-	temp = np.exp(temp)
-	gaussian = np.sum(temp)
-	
-	return gaussian
+    # Calcola la distanza euclidea al quadrato tra 'centre' e 'x'
+    # mediante sottrazione elemento per elemento, elevazione al quadrato e somma lungo l'asse 1.
+    distanza_quad = -np.sum((centre - x) ** 2, axis=1)
+
+    # Divide la distanza quadrata per (2 * sigma * sigma).
+    distanza_quad_normalizzata = distanza_quad / (2 * sigma * sigma)
+
+    # Calcola l'esponenziale della distanza quadrata normalizzata.
+    esponenziale = np.exp(distanza_quad_normalizzata)
+
+    # Somma tutti gli elementi dell'esponenziale.
+    rbf = np.sum(esponenziale)
+
+    return rbf
+
+def laplacian(centre, x, sigma):
+    # Ridimensiona l'array 'centre' in una matrice bidimensionale con forma (1, n),
+    # dove n è il numero di elementi nel vettore 'centre'.
+    centre = centre.reshape(1, -1)
+
+	# Calcola la distanza euclidea al quadrato tra 'centre' e 'x'
+    # mediante sottrazione elemento per elemento, elevazione al quadrato e somma lungo l'asse 1.
+    distance_squared = np.sum((centre - x) ** 2, axis=1)
+    
+    # Calcola la distanza euclidea prendendo la radice quadrata
+    # della distanza euclidea al quadrato.
+    distance = np.sqrt(distance_squared)
+    
+	# Calcola la funzione Laplaciana mediante l'esponenziale del negativo
+    # della distanza divisa per 'sigma'.
+    laplacian = np.exp(-distance / sigma)
+    return laplacian
+
+def uniform(centre, x, sigma):
+    # Ridimensiona l'array 'centre' in una matrice bidimensionale con forma (1, n),
+    # dove n è il numero di elementi nel vettore 'centre'.
+    centre = centre.reshape(1, -1)
+    
+	# Calcola la norma euclidea della differenza tra 'centre' e 'x'.
+    distance = np.linalg.norm(centre - x, axis=1)
+    
+	# Crea un nuovo array 'uniform' inizializzato con 1 se la distanza è minore o uguale a 'sigma',
+    # altrimenti viene impostato a 0. Questo genera una funzione uniforme che assume valore 1
+    # all'interno di un certo raggio e valore 0 al di fuori di esso.# Crea un nuovo array 'uniform' inizializzato con 1 se la distanza è minore o uguale a 'sigma',
+    # altrimenti viene impostato a 0. Questo genera una funzione uniforme che assume valore 1
+    # all'interno di un certo raggio e valore 0 al di fuori di esso.
+    uniform = np.where(distance <= sigma, 1, 0)
+    
+    return uniform
+
+def epanechnikov(centre, x, sigma):
+    # Ridimensiona l'array 'centre' in una matrice bidimensionale con forma (1, n),
+    # dove n è il numero di elementi nel vettore 'centre'.
+    centre = centre.reshape(1, -1)
+    
+    # Calcola la distanza euclidea al quadrato tra 'centre' e 'x'
+    # mediante sottrazione elemento per elemento, elevazione al quadrato e somma lungo l'asse 1.
+    distanza_quad = np.sum((centre - x) ** 2, axis=1)
+    
+    # Calcola la distanza euclidea prendendo la radice quadrata
+    # della distanza euclidea al quadrato.
+    distanza = np.sqrt(distanza_quad)
+    
+    # Crea un nuovo array 'epanechnikov' che viene calcolato utilizzando la formula
+    # del kernel di Epanechnikov. La formula prevede un fattore moltiplicativo costante di 0.75,
+    # seguito da (1 - (distanza_quad / (sigma ** 2))). Questa formula assegna un valore ponderato
+    # alla funzione in base alla distanza dalla posizione centrale, con un massimo raggiunto quando
+    # la distanza è zero (1 - 0 = 1) e una diminuzione quadratica man mano che la distanza aumenta.
+    epanechnikov = np.where(distanza <= sigma, 0.75 * (1 - distanza_quad / (sigma ** 2)), 0)
+    
+    return epanechnikov
+
+def triangle(centre, x, sigma):
+    # Ridimensiona l'array 'centre' in una matrice bidimensionale con forma (1, n),
+    # dove n è il numero di elementi nel vettore 'centre'.
+    centre = centre.reshape(1, -1)
+    
+    # Calcola la norma euclidea della differenza tra 'centre' e 'x'.
+    distance = np.linalg.norm(centre - x, axis=1)
+    
+    # Crea un nuovo array 'triangle' che viene calcolato utilizzando la formula
+    # della funzione triangolare. La formula prevede un valore costante di 1 meno
+    # la distanza normalizzata rispetto a 'sigma'. In altre parole, misura la distanza
+    # relativa tra il punto e il centro in proporzione a 'sigma', con un valore massimo
+    # di 1 raggiunto quando la distanza è zero e una diminuzione lineare man mano che
+    # la distanza aumenta.
+    triangle = np.where(distance <= sigma, 1 - distance / sigma, 0)
+    
+    return triangle
 
 
 def subset_by_class(data, labels):
@@ -40,12 +125,11 @@ def subset_by_class(data, labels):
 	return x_train_subsets
 
 
-def PNN(data):
+def PNN(data, kernel_name):
 	num_test_set = data['x_test'].shape[0]
 
 	#Anche questo va modificato, perchè non è detto che in y_train ci sia almeno un sample di tutte e 256 persone
 	# labels = np.unique(data['y_train'], axis=0)
-
 	labels = []
 
 	# Inizializza una matrice vuota per contenere i vettori one-hot-encoded
@@ -57,9 +141,9 @@ def PNN(data):
 
 	for row in one_hot_matrix:
 		labels.append(list(row))
-	
+
 	#print(labels)
- 
+
 	num_class = len(labels)
 
 	#print("Num classes: ",num_class)
@@ -85,18 +169,25 @@ def PNN(data):
 				dim1 = np.shape(subset)[1]
 				subset = subset.reshape((1,dim0,dim1))
 				#print("\tNEW subset ",j," shape: ",np.shape(subset))
-				summation_layer[j] = np.sum(
-				rbf(test_point, subset[0], sigma)
-			) / subset[0].shape[0]
+				if (kernel_name == "rbf"):
+					summation_layer[j] = np.sum(rbf(test_point, subset[0], sigma)) / subset[0].shape[0]
+				elif (kernel_name == "laplacian"):
+					summation_layer[j] = np.sum(laplacian(test_point, subset[0], sigma)) / subset[0].shape[0]
+				elif (kernel_name == "uniform"):
+					summation_layer[j] = np.sum(uniform(test_point, subset[0], sigma)) / subset[0].shape[0]
+				elif (kernel_name == "epanechnikov"):
+					summation_layer[j] = np.sum(epanechnikov(test_point, subset[0], sigma)) / subset[0].shape[0]
+				elif (kernel_name == "triangle"):
+					summation_layer[j] = np.sum(triangle(test_point, subset[0], sigma)) / subset[0].shape[0]
 			else:
 				#print("\tSubset shape", j, "shape: ", np.shape(subset))
 				summation_layer[j] = 0
 			#print("Summation layer ", j, ": ", summation_layer[j])
-	
+
 		predictions[i] = np.argmax(summation_layer)
 		
 		i = i + 1
-	
+
 	return predictions
 
 
@@ -135,7 +226,7 @@ if __name__ == '__main__':
 
 	data = read_data.create_data_correctly(train_csv_filename, test_csv_filename)
 
-	predictions = PNN(data)
+	predictions = PNN(data,"triangle")
 
 	#print(type(predictions))
 
