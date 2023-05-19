@@ -19,7 +19,7 @@ import math
 import random
 import pnn as p
 
-def create_csv(csv_filename,directory,type,main_label,frames_left_map):
+def create_csv(csv_filename,directory,type,main_label,frames_for_main,frames_for_others):
     with open(csv_filename, mode='w', newline='') as file:
         writer = csv.writer(file)
 
@@ -36,21 +36,26 @@ def create_csv(csv_filename,directory,type,main_label,frames_left_map):
 
             for video in tqdm(files, desc=directory, ncols=100):
                 video_label = str(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
-                current_frames_left = frames_left_map[video_label]
 
-                res,frames_read = ottieni_features_da_video(video,type, current_frames_left)
-                frames_left_map[video_label] = current_frames_left - frames_read
-                
-                if current_frames_left>0:
-                    res_split = np.array_split(res, current_frames_left)
+                frames_to_fetch = 0
+                if video_label == main_label:
+                      frames_to_fetch = frames_for_main
+                else:
+                      frames_to_fetch = frames_for_others
 
-                    for i in range(current_frames_left):
-                        info_row = res_split[i]
-                        if np.shape(info_row)[0]==20:
+                res = ottieni_features_da_video(video,type,frames_to_fetch)
+
+                #print(csv_filename, "-",video_label,"-",np.shape(res))
+
+                if np.shape(res)[0]!=0:
+                      num_rows = np.shape(res)[0]/20
+                      res_split = np.array_split(res,num_rows)
+
+                      for elem in res_split:
                             if video_label == main_label:
-                                writer.writerow(np.append(info_row, "1"))
+                                writer.writerow(np.append(elem, "1"))
                             else:
-                                writer.writerow(np.append(info_row, "0"))
+                                writer.writerow(np.append(elem, "0"))
 
 def ottieni_features_da_video(filename,type,num_frames):
 
@@ -65,8 +70,6 @@ def ottieni_features_da_video(filename,type,num_frames):
     ret, frame = cap.read()
 
     list_of_euclidean_distances = []
-
-    good_frames = 0
 
     while ret:
 
@@ -84,7 +87,6 @@ def ottieni_features_da_video(filename,type,num_frames):
             i = next(iterator)
 
             if results and results.multi_face_landmarks:
-                good_frames = good_frames + 1
                 # Primo elemento della tupla
                 point1 = results.multi_face_landmarks[0].landmark[i[0]]
                 node1_x = int(point1.x * width)
@@ -109,7 +111,7 @@ def ottieni_features_da_video(filename,type,num_frames):
 
                 list_of_euclidean_distances.append(d)
 
-    return list_of_euclidean_distances,good_frames
+    return list_of_euclidean_distances
 
 def PNN(data, kernel_name):
 	num_test_set = data['x_test'].shape[0]
@@ -204,34 +206,25 @@ label_main_subject = random.choice(unique_labels)
      
 print("Il fortunato è :",label_main_subject)
 
-frames_left_in_test = {}
+frames_for_test_video_of_main_subject = num_frames_of_main_subject_in_test
+frames_for_test_video_of_other_subject = int(np.floor(num_frames_of_other_subjects_in_test/(num_people-1)))
 
-frames_left_in_test[label_main_subject] = num_frames_of_main_subject_in_test
-for label in unique_labels:
-    if label != label_main_subject:
-        frames_left_in_test[label] = int(np.floor(num_frames_of_other_subjects_in_test/(num_people-1)))
+frames_for_train_video_of_main_subject = num_frames_of_main_subject_in_train
+frames_for_train_video_of_other_subject = int(np.floor(num_frames_of_other_subjects_in_train/(num_people-1)))
 
-#print("FRAMES LEFT IN TEST\n",frames_left_in_test)
-
-frames_left_in_train = {}
-
-frames_left_in_train[label_main_subject] = num_frames_of_main_subject_in_train
-for label in unique_labels:
-    if label != label_main_subject:
-        frames_left_in_train[label] = int(np.floor(num_frames_of_other_subjects_in_train/(num_people-1)))
-
-#print("FRAMES LEFT IN TRAIN\n",frames_left_in_train)
-
-#L'hashmap frames_left_in_X indica, per ogni persona, quanti altri frame di quella persona dobbiamo prelevare dalla cartella X!
+'''print("Da ogni video di TEST del MAIN subject vanno prelevati",frames_for_test_video_of_main_subject, "frames")
+print("Da ogni video di TEST degli OTHER subject vanno prelevati",frames_for_test_video_of_other_subject)
+print("Da ogni video di TRAIN del MAIN subject vanno prelevati",frames_for_train_video_of_main_subject)
+print("Da ogni video di TRAIN degli OTHER subject vanno prelevati",frames_for_train_video_of_other_subject)'''
 
 metriche = ["DistanzeEuclidee2D", "DistanzeEuclideeNormalizzate2D", "CityBlock3D"]
 
 csv_filename_test = "VERIFY_"+metriche[0]+"_"+label_main_subject+"_test.csv"
-create_csv(csv_filename_test,"Dataset/Test",metriche[0],label_main_subject,frames_left_in_test)
+create_csv(csv_filename_test,"Dataset/Test",metriche[0],label_main_subject,frames_for_test_video_of_main_subject,frames_for_test_video_of_other_subject)
 print(csv_filename_test," creato con successo!")
 
 csv_filename_train = "VERIFY_"+metriche[0]+"_"+label_main_subject+"_train.csv"
-create_csv(csv_filename_train,"Dataset/Train",metriche[0],label_main_subject,frames_left_in_train)
+create_csv(csv_filename_train,"Dataset/Train",metriche[0],label_main_subject,frames_for_train_video_of_main_subject,frames_for_train_video_of_other_subject)
 print(csv_filename_train," creato con successo!")
 
 data = rd.create_data_correctly(csv_filename_train,csv_filename_test)
