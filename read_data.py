@@ -52,7 +52,10 @@ def create_data_correctly(train_csv_filename, test_csv_filename):
     #Ottengo tutte le possibili label, anche con ripetizioni
     video_label_list = get_labels([train_csv_filename,test_csv_filename])
 
+    #print("Video label list: ",video_label_list)
+
     #Determino quante distinte persone ci sono in tutte le cartelle
+    #print("Video Label List Unique: ",np.unique(video_label_list))
     num_distinct_people = len(np.unique(video_label_list))
     #print("\nNumero reali individui distinti: ",num_distinct_people)
 

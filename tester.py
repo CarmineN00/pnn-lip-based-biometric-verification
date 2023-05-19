@@ -42,17 +42,13 @@ if __name__ == "__main__":
             csv_filename = metrica + "_" + str(num_frames) + "_"
             test_csv_file = csv_filename + "test.csv"
             train_csv_file = csv_filename + "train.csv"
-
-            to_print = "\nKernel: "+kernel+"\nMetric: "+metrica          
-            print(to_print)
-
-            file_rows += to_print
             
             data = read_data.create_data_correctly(train_csv_file, test_csv_file)
             predictions = p.PNN(data,kernel)
 
+            to_print = "Kernel: "+kernel+"\nMetric: "+metrica
             scores = p.print_metrics(data['y_test_before_ohe'], predictions)
-            to_print = "\nAccuracy: "+str(scores["accuracy"])+"\nPrecision: "+str(scores["precision"])+"\nRecall: "+str(scores["recall"])+"\n\n"
+            to_print+="\nAccuracy: "+str(scores["accuracy"])+"\nPrecision: "+str(scores["precision"])+"\nRecall: "+str(scores["recall"])+"\n\n"
             print(to_print)
             file_rows += to_print
 
