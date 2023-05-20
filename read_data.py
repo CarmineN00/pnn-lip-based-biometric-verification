@@ -140,15 +140,11 @@ def ottieni_features_da_video(filename,type, num_frames):
                 point1 = results.multi_face_landmarks[0].landmark[i[0]]
                 node1_x = int(point1.x * width)
                 node1_y = int(point1.y * height)
-                if (type == "DistanzeEuclidee2D"):
-                    cv2.circle(frame, (node1_x, node1_y), 2, (255, 255, 255), -1)
 
                 # Secondo elemento della tupla
                 point2 = results.multi_face_landmarks[0].landmark[i[1]]
                 node2_x = int(point2.x * width)
                 node2_y = int(point2.y * height)
-                if (type == "DistanzeEuclidee2D"):
-                    cv2.circle(frame, (node2_x, node2_y), 2, (255, 255, 255), -1)
 
                 # Calcolo della distanza euclidea tra i punti
                 if (type == "DistanzeEuclidee2D"):
