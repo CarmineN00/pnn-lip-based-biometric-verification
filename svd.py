@@ -5,7 +5,6 @@ import csv
 import os
 import numpy as np
 import glob
-from numpy.linalg import svd
 import read_data as rd
 import pnn as p
 

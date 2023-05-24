@@ -194,16 +194,6 @@ def PNN(data, kernel_name):
 
 
 def print_metrics(y_test, predictions):
-	#print("Y test:", np.shape(y_test))
-	#print("Predictions: ",np.shape(predictions))
-
-	#print('Confusion Matrix')
-	#print(confusion_matrix(y_test, predictions))
-	#print('Accuracy: {}'.format(accuracy_score(y_test, predictions)))
-	#print('Precision: {}'.format(precision_score(y_test, predictions, average='macro', zero_division=1)))
-	#print('Recall: {}'.format(recall_score(y_test, predictions, average='macro', zero_division=1)))
-	#print('Precision: {}'.format(precision_score(y_test, predictions, average = 'micro')))
-	#print('Recall: {}'.format(recall_score(y_test, predictions, average = 'micro')))
 
 	scores = {
 		"accuracy": accuracy_score(y_test, predictions),
@@ -246,4 +236,6 @@ if __name__ == '__main__':
 
 	pd.DataFrame(predictions).to_csv("predictions.csv")
 
-	print_metrics(data['y_test_before_ohe'], predictions)
+	scores = print_metrics(data['y_test_before_ohe'], predictions)
+	to_print="\nAccuracy: "+str(scores["accuracy"])+"\nPrecision: "+str(scores["precision"])+"\nRecall: "+str(scores["recall"])+"\n\n"
+	print(to_print)

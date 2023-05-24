@@ -98,8 +98,10 @@ def create_data_correctly(train_csv_filename, test_csv_filename):
     data = {
         'x_train': x_train,
         'x_test': x_test,
-        'y_train': ohe_correct(y_train, num_distinct_people),
-        'y_test': ohe_correct(y_test, num_distinct_people),
+        #'y_train': ohe_correct(y_train, num_distinct_people),
+        #'y_test': ohe_correct(y_test, num_distinct_people),
+        'y_train': ohe_correct(y_train, 256),
+        'y_test': ohe_correct(y_test, 256),
         #Nel caso dovesse servire, fornisco anche la hashmap
         'hashmap': hashmap,
         'y_test_before_ohe': y_test,
@@ -107,6 +109,146 @@ def create_data_correctly(train_csv_filename, test_csv_filename):
     }
 
     return data
+
+def reduce_data(data,num_columns):
+    # Estrai l'ultima colonna dell'array
+
+    dataset_train = np.column_stack((data['x_train'], data['y_train_before_ohe']))
+    dataset_test = np.column_stack((data['x_test'], data['y_test_before_ohe']))
+    dataset_completo = np.concatenate((dataset_train, dataset_test), axis=0)
+
+    last_column = dataset_completo[:, -1]
+
+    # Ottieni i distinti valori dell'ultima colonna
+    distinct_values = np.unique(last_column)
+
+    #print("Ci sono ",len(distinct_values))
+
+    # Inizializza un dizionario per tenere traccia degli array di righe
+    grouped_rows = {}
+
+    # Itera sui distinti valori dell'ultima colonna
+    for value in distinct_values:
+        # Seleziona le righe che hanno il valore corrente nell'ultima colonna
+        rows_with_value = dataset_completo[last_column == value]
+
+        # Aggiungi le righe al dizionario
+        grouped_rows[value] = rows_with_value
+
+    list_of_variances = []
+    
+    for value in distinct_values:
+        '''print("Value: ",value)
+        print("Shape of grouped_rows[value]", np.shape(grouped_rows[value]))'''
+
+        variance = np.var(grouped_rows[value][:, :-1], axis=0)
+        list_of_variances.append(variance)
+    
+    #print("Shape of list of variances: ",np.shape(list_of_variances))
+
+    variances_mean = np.mean(list_of_variances, axis=0)
+
+    #print("Shape of variances_mean:",np.shape(variances_mean))
+    #print("Variances Mean: ",variances_mean)
+
+    indexes_of_lowest_variances_mean = np.argsort(variances_mean)[:num_columns]
+    
+    #print("Indexes of lowest variances mean:",indexes_of_lowest_variances_mean)
+
+    reduced_data = {
+        'x_train': data['x_train'][:,indexes_of_lowest_variances_mean],
+        'x_test': data['x_test'][:,indexes_of_lowest_variances_mean],
+        'y_train': data['y_train'],
+        'y_test': data['y_test'],
+        #Nel caso dovesse servire, fornisco anche la hashmap
+        'hashmap': data['hashmap'],
+        'y_test_before_ohe': data['y_test_before_ohe'],
+        'y_train_before_ohe': data['y_train_before_ohe'],
+    }
+
+    return reduced_data
+    
+
+def ottieni_features_spaced_da_video(filename, type, num_frames):
+    # Apri il video
+    video = cv2.VideoCapture(filename)
+
+    mp_face_mesh = mp.solutions.face_mesh
+    face_mesh = mp_face_mesh.FaceMesh()
+
+    total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    frame_interval = np.floor(total_frames/num_frames)
+
+    # Verifica se il video è stato aperto correttamente
+    if not video.isOpened():
+        print("Impossibile aprire il video")
+        return
+
+    # Inizializza variabili
+    frame_count = 0
+
+    list_of_euclidean_distances = []
+
+    while True:
+        # Leggi il frame corrente
+        ret, frame = video.read()
+
+        # Verifica se il frame è stato letto correttamente
+        if not ret:
+            break
+
+        # Mostra il frame solo se è un frame selezionato
+        if frame_count % frame_interval == 0:
+            height, width, _ = frame.shape
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            results = face_mesh.process(rgb_frame)
+
+            iterator = iter(lp.lip_landmarks)
+            for j in range(0, len(lp.lip_landmarks)):
+                i = next(iterator)
+
+                if results and results.multi_face_landmarks:
+                    # Primo elemento della tupla
+                    point1 = results.multi_face_landmarks[0].landmark[i[0]]
+                    node1_x = int(point1.x * width)
+                    node1_y = int(point1.y * height)
+
+                    # Secondo elemento della tupla
+                    point2 = results.multi_face_landmarks[0].landmark[i[1]]
+                    node2_x = int(point2.x * width)
+                    node2_y = int(point2.y * height)
+
+                    # Calcolo della distanza euclidea tra i punti
+                    if (type == "DistanzeEuclidee2D"):
+                        d = math.sqrt((node2_x - node1_x) ** 2 + (node2_y - node1_y) ** 2)
+                    elif (type == "DistanzeEuclideeNormalizzate2D"):
+                        d = math.sqrt((point2.x - point1.y) ** 2 + (point2.y - point1.y) ** 2)
+                    elif (type == "CityBlock3D"):
+                        d = abs(point1.x - point2.x) + abs(point1.y - point2.y) + abs(point1.z - point2.z)
+
+                    list_of_euclidean_distances.append(d)
+
+
+        frame_count += 1
+
+    # Rilascia le risorse
+    video.release()
+    return list_of_euclidean_distances
+
+import numpy as np
+
+def print_stats(data):
+    x_train_shape = np.shape(data['x_train'])
+    x_test_shape = np.shape(data['x_test'])
+    y_train_shape = np.shape(data['y_train'])
+    y_test_shape = np.shape(data['y_test'])
+    
+    print("Shape of X_TRAIN:", x_train_shape)
+    print("Shape of X_TEST:", x_test_shape)
+    print("Shape of Y_TRAIN:", y_train_shape)
+    print("Shape of Y_TEST:", y_test_shape)
 
 def ottieni_features_da_video(filename,type, num_frames):
     mp_face_mesh = mp.solutions.face_mesh
@@ -171,6 +313,7 @@ def ottieni_features_delaunay(filename, num_frames):
     ret, frame = cap.read()
 
     list_of_euclidean_distances = []
+    
     
     while ret:
         frame_distances = []
@@ -251,7 +394,9 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
         header_string = []
 
         num_features = 0
+
         if experiment == "delaunay":
+            num_features = 29
             num_features = 29
         else:
             num_features = 20
@@ -270,11 +415,11 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
                 res = []
                 if experiment == "delaunay":
                     res = ottieni_features_delaunay(video, num_frames)
+                elif experiment == "spaced":
+                    res = ottieni_features_spaced_da_video(video,type,num_frames)
                 else:
                     res = ottieni_features_da_video(video,type, num_frames)
                 video_label = str(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
-
-                print("print shape of res: ",np.shape(res))
 
                 if np.shape(res)[0] == num_features * num_frames:
                     res_split = np.array_split(res, num_frames)
@@ -286,7 +431,7 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
                     print("Failed to fetch lip features from video: ",video)'''
 
 if __name__ == "__main__":
-    #create_data_correctly("train_dataset.csv", "test_dataset.csv")
-    create_csv("delaunay_train.csv","Dataset/Train","",20,"delaunay")
-
-
+    #create_csv("spaced_test_dataset.csv","Dataset/Test","DistanzeEuclidee2D",20,"spaced")
+    #create_csv("spaced_train_dataset.csv","Dataset/Train","DistanzeEuclidee2D",20,"spaced")
+    data = create_data_correctly("spaced_train_dataset.csv","spaced_test_dataset.csv")
+    reduced_data = reduce_data(data, 15)
