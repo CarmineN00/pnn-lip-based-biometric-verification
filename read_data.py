@@ -170,11 +170,11 @@ def ottieni_features_delaunay(filename, num_frames):
 
     ret, frame = cap.read()
 
-    landmarks = []
     list_of_euclidean_distances = []
-    lower_bound = 29
-
+    
     while ret:
+        frame_distances = []
+        landmarks = []
 
         ret, frame = cap.read()
         if not ret:
@@ -202,42 +202,47 @@ def ottieni_features_delaunay(filename, num_frames):
                 node2_y = int(point2.y * height)
                 landmarks.append((node2_x,node2_y))
 
-        landmarks_np = np.array(landmarks)
-        landmarks_np = np.unique(landmarks_np, axis=0)
-        print(np.shape(landmarks_np))
-        landmarks_np = np.reshape(landmarks_np, (len(landmarks_np), 2))
-        triangles = Delaunay(landmarks_np)
+        if np.shape(landmarks)[0] == 0:
+            return []
+        else:
 
-        # Set per tenere traccia dei segmenti unici
-        unique_segments = set()
+            landmarks_np = np.array(landmarks)
 
-        # Itera sui triangoli
-        for tri in triangles.simplices:
-            pt1, pt2, pt3 = landmarks_np[tri]
-            
-            # Controllo per segmenti unici
-            segment1 = tuple(sorted([tuple(pt1), tuple(pt2)]))
-            segment2 = tuple(sorted([tuple(pt2), tuple(pt3)]))
-            segment3 = tuple(sorted([tuple(pt3), tuple(pt1)]))
-            
-            # Disegna solo segmenti unici
-            if segment1 not in unique_segments:
-                unique_segments.add(segment1)
-                dist = np.linalg.norm(pt2 - pt1)
-                list_of_euclidean_distances.append(dist)
-            if segment2 not in unique_segments:
-                unique_segments.add(segment2)
-                dist = np.linalg.norm(pt3 - pt2)
-                list_of_euclidean_distances.append(dist)
-            if segment3 not in unique_segments:
-                unique_segments.add(segment3)
-                dist = np.linalg.norm(pt3 - pt1)
-                list_of_euclidean_distances.append(dist)
+            #per frame diversi non trova gli stessi triangoli
+            #l'algoritmo di delaunay individua a quali terne di punti associare i triangoli 
+            #in base alla loro posizione euclidea
+            triangles = Delaunay(landmarks_np)
 
-            if len(list_of_euclidean_distances) >= lower_bound:
-                return list_of_euclidean_distances
+            # Set per tenere traccia dei segmenti unici
+            unique_segments = set()
+
+            # Itera sui triangoli
+            for tri in triangles.simplices:
+                pt1, pt2, pt3 = landmarks_np[tri]
+                
+                # Controllo per segmenti unici
+                segment1 = tuple(sorted([tuple(pt1), tuple(pt2)]))
+                segment2 = tuple(sorted([tuple(pt2), tuple(pt3)]))
+                segment3 = tuple(sorted([tuple(pt3), tuple(pt1)]))
+                
+                # Disegna solo segmenti unici
+                if segment1 not in unique_segments:
+                    unique_segments.add(segment1)
+                    dist = np.linalg.norm(pt2 - pt1)
+                    frame_distances.append(dist)
+                if segment2 not in unique_segments:
+                    unique_segments.add(segment2)
+                    dist = np.linalg.norm(pt3 - pt2)
+                    frame_distances.append(dist)
+                if segment3 not in unique_segments:
+                    unique_segments.add(segment3)
+                    dist = np.linalg.norm(pt3 - pt1)
+                    frame_distances.append(dist)
         
-        return list_of_euclidean_distances
+            for distance in frame_distances[:29]:
+                list_of_euclidean_distances.append(distance)
+
+    return list_of_euclidean_distances
 
 def create_csv(csv_filename, directory, type, num_frames, experiment):
     with open(csv_filename, mode='w', newline='') as file:
@@ -247,7 +252,7 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
 
         num_features = 0
         if experiment == "delaunay":
-            num_features = 41
+            num_features = 29
         else:
             num_features = 20
         
@@ -261,6 +266,7 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
             files = glob.glob(directory + "/*.avi")
 
             for video in tqdm(files, desc=directory, ncols=100):
+                print("Nome video: ", video)
                 res = []
                 if experiment == "delaunay":
                     res = ottieni_features_delaunay(video, num_frames)
@@ -281,6 +287,6 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
 
 if __name__ == "__main__":
     #create_data_correctly("train_dataset.csv", "test_dataset.csv")
-    create_csv("delaunay_test.csv","Dataset/Test","",20,"delaunay")
+    create_csv("delaunay_train.csv","Dataset/Train","",20,"delaunay")
 
 
