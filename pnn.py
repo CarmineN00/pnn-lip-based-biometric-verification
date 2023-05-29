@@ -210,8 +210,8 @@ if __name__ == '__main__':
 	# OGNI METODO DI READ_DATA DEVE ORA ESSERE CHIAMATO DA read_data #
 	##########################################################################
 
-	train_csv_filename = "train_dataset.csv"
-	test_csv_filename = "test_dataset.csv"
+	train_csv_filename = "DistanzeEuclidee2D_20_twenty_spaced_dynamic_train_dataset.csv"
+	test_csv_filename = "DistanzeEuclidee2D_20_twenty_spaced_dynamic_test_dataset.csv"
 
 	train_directory = "Dataset/Train"
 	test_directory = "Dataset/Test"
@@ -225,7 +225,7 @@ if __name__ == '__main__':
 		read_data.create_csv(train_csv_filename, train_directory, kernel, num_frames)
 		# Creazione del dataset di test
 		read_data.create_csv(test_csv_filename, test_directory, kernel, num_frames)
-
+		
 	datasets = [train_csv_filename, test_csv_filename]
 
 	data = read_data.create_data_correctly(train_csv_filename, test_csv_filename)
@@ -234,8 +234,8 @@ if __name__ == '__main__':
 
 	#print(type(predictions))
 
-	pd.DataFrame(predictions).to_csv("predictions.csv")
+	#pd.DataFrame(predictions).to_csv("predictions.csv")
 
 	scores = print_metrics(data['y_test_before_ohe'], predictions)
-	to_print="\nAccuracy: "+str(scores["accuracy"])+"\nPrecision: "+str(scores["precision"])+"\nRecall: "+str(scores["recall"])+"\n\n"
+	to_print="\n"+test_csv_filename+"\nAccuracy: "+str(scores["accuracy"])+"\nPrecision: "+str(scores["precision"])+"\nRecall: "+str(scores["recall"])+"\n\n"
 	print(to_print)

@@ -5,6 +5,7 @@ import math
 import mediapipe as mp
 import pandas
 import LipLandmarks as lp
+import LipLandmarksDynamic as lpd
 import csv
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import scale
@@ -171,7 +172,7 @@ def reduce_data(data,num_columns):
     return reduced_data
     
 
-def ottieni_features_spaced_da_video(filename, type, num_frames):
+def ottieni_features_twenty_spaced_da_video(filename, type, num_frames):
     # Apri il video
     video = cv2.VideoCapture(filename)
 
@@ -239,6 +240,75 @@ def ottieni_features_spaced_da_video(filename, type, num_frames):
     video.release()
     return list_of_euclidean_distances
 
+def ottieni_features_twenty_spaced_dynamic_da_video(filename,type,num_frames):
+    # Apri il video
+    video = cv2.VideoCapture(filename)
+
+    mp_face_mesh = mp.solutions.face_mesh
+    face_mesh = mp_face_mesh.FaceMesh()
+
+    total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    frame_interval = np.floor(total_frames/num_frames)
+
+    # Verifica se il video è stato aperto correttamente
+    if not video.isOpened():
+        print("Impossibile aprire il video")
+        return
+
+    # Inizializza variabili
+    frame_count = 0
+
+    list_of_euclidean_distances = []
+
+    while True:
+        # Leggi il frame corrente
+        ret, frame = video.read()
+
+        # Verifica se il frame è stato letto correttamente
+        if not ret:
+            break
+
+        # Mostra il frame solo se è un frame selezionato
+        if frame_count % frame_interval == 0:
+            height, width, _ = frame.shape
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            results = face_mesh.process(rgb_frame)
+
+            iterator = iter(lpd.lip_landmarks)
+            for j in range(0, len(lpd.lip_landmarks)):
+                i = next(iterator)
+
+                if results and results.multi_face_landmarks:
+                    # Primo elemento della tupla
+                    point1 = results.multi_face_landmarks[0].landmark[i[0]]
+                    node1_x = int(point1.x * width)
+                    node1_y = int(point1.y * height)
+
+                    # Secondo elemento della tupla
+                    point2 = results.multi_face_landmarks[0].landmark[i[1]]
+                    node2_x = int(point2.x * width)
+                    node2_y = int(point2.y * height)
+
+                    # Calcolo della distanza euclidea tra i punti
+                    if (type == "DistanzeEuclidee2D"):
+                        d = math.sqrt((node2_x - node1_x) ** 2 + (node2_y - node1_y) ** 2)
+                    elif (type == "DistanzeEuclideeNormalizzate2D"):
+                        d = math.sqrt((point2.x - point1.y) ** 2 + (point2.y - point1.y) ** 2)
+                    elif (type == "CityBlock3D"):
+                        d = abs(point1.x - point2.x) + abs(point1.y - point2.y) + abs(point1.z - point2.z)
+
+                    list_of_euclidean_distances.append(d)
+
+
+        frame_count += 1
+
+    # Rilascia le risorse
+    video.release()
+    return list_of_euclidean_distances
+
+
 import numpy as np
 
 def print_stats(data):
@@ -252,7 +322,7 @@ def print_stats(data):
     print("Shape of Y_TRAIN:", y_train_shape)
     print("Shape of Y_TEST:", y_test_shape)
 
-def ottieni_features_da_video(filename,type, num_frames):
+def ottieni_features_twenty_da_video(filename,type, num_frames):
     mp_face_mesh = mp.solutions.face_mesh
     face_mesh = mp_face_mesh.FaceMesh()
 
@@ -388,6 +458,69 @@ def ottieni_features_delaunay(filename, num_frames):
 
     return list_of_euclidean_distances
 
+def ottieni_features_fullmesh_spaced(filename,num_frames):
+    mp_face_mesh = mp.solutions.face_mesh
+    face_mesh = mp_face_mesh.FaceMesh()
+
+    cap = cv2.VideoCapture(filename)
+
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    frame_interval = np.floor(total_frames/num_frames)
+
+    ret, frame = cap.read()
+
+    # Inizializza variabili
+    frame_count = 0
+
+    list_of_euclidean_distances = []
+    
+    while ret:
+        landmarks = []
+
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        if frame_count % frame_interval == 0:
+            height, width, _ = frame.shape
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            results = face_mesh.process(rgb_frame)
+
+            iterator = iter(lp.lip_landmarks)
+            for j in range(0, len(lp.lip_landmarks)):
+                i = next(iterator)
+
+                if results and results.multi_face_landmarks:
+                    # Primo elemento della tupla
+                    point1 = results.multi_face_landmarks[0].landmark[i[0]]
+                    node1_x = int(point1.x * width)
+                    node1_y = int(point1.y * height)
+                    landmarks.append((node1_x,node1_y))
+
+                    # Secondo elemento della tupla
+                    point2 = results.multi_face_landmarks[0].landmark[i[1]]
+                    node2_x = int(point2.x * width)
+                    node2_y = int(point2.y * height)
+                    landmarks.append((node2_x,node2_y))
+
+            # landmarks senza duplicati
+            landmarks = list(OrderedDict.fromkeys(landmarks))
+
+            # considero tutte le combinazioni di punti
+            fullmesh = list(itertools.combinations(landmarks,2))
+
+            # calcolo la distanza per ogni coppia
+            for link in fullmesh:
+                point1, point2 = link
+                d = math.sqrt((point2[0] - point1[0]) ** 2 + (point2[1]- point1[1]) ** 2)
+                list_of_euclidean_distances.append(d)
+        
+        frame_count += 1
+
+    return list_of_euclidean_distances
+
 def ottieni_features_fullmesh(filename,num_frames):
     mp_face_mesh = mp.solutions.face_mesh
     face_mesh = mp_face_mesh.FaceMesh()
@@ -456,14 +589,21 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
 
         if experiment == "delaunay":
             num_features = 29
-        elif experiment == "fullmesh":
+        elif experiment == "fullmesh_spaced" or experiment == "fullmesh":
             num_features = 153
+        elif experiment == "twenty_spaced_dynamic":
+            num_features = 22 * num_frames
         else:
             num_features = 20
+
+        print("Creando un dataset con ",num_features," features")
         
         for i in range(num_features):
             header_string.append("Feature " + str(i))
-
+        
+        if experiment == "twenty_spaced_dynamic":
+            num_features = num_features/num_frames
+        
         header_string.append("Label")
         writer.writerow(header_string)
 
@@ -471,32 +611,49 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
             files = glob.glob(directory + "/*.avi")
 
             for video in tqdm(files, desc=directory, ncols=100):
-                print("Nome video: ", video)
+                #print("Nome video: ", video)
                 res = []
                 if experiment == "delaunay":
                     res = ottieni_features_delaunay(video, num_frames)
-                elif experiment == "spaced":
-                    res = ottieni_features_spaced_da_video(video,type,num_frames)
+                elif experiment == "twenty_spaced":
+                    res = ottieni_features_twenty_spaced_da_video(video,type,num_frames)
+                elif experiment == "twenty_spaced_dynamic":
+                    res = ottieni_features_twenty_spaced_dynamic_da_video(video,type,num_frames)
+                elif experiment == "fullmesh_spaced":
+                    res = ottieni_features_fullmesh_spaced(video, num_frames)
                 elif experiment == "fullmesh":
-                    res = ottieni_features_fullmesh(video, num_frames)
+                    res = ottieni_features_fullmesh(video,num_frames)
                 else:
-                    res = ottieni_features_da_video(video,type, num_frames)
+                    res = ottieni_features_twenty_da_video(video,type, num_frames)
                 video_label = str(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
 
                 if np.shape(res)[0] == num_features * num_frames:
-                    res_split = np.array_split(res, num_frames)
-
-                    for i in range(num_frames):
-                        info_row = res_split[i]
-                        writer.writerow(np.append(info_row, video_label))
-                '''else:
-                    print("Failed to fetch lip features from video: ",video)'''
+                    if experiment == "twenty_spaced_dynamic":
+                        writer.writerow(np.append(res,video_label))
+                    else:
+                        res_split = np.array_split(res, num_frames)
+                        for i in range(num_frames):
+                            info_row = res_split[i]
+                            writer.writerow(np.append(info_row, video_label))
 
 if __name__ == "__main__":
-    #create_csv("spaced_test_dataset.csv","Dataset/Test","DistanzeEuclidee2D",20,"spaced")
-    #create_csv("spaced_train_dataset.csv","Dataset/Train","DistanzeEuclidee2D",20,"spaced")
-    #data = create_data_correctly("spaced_train_dataset.csv","spaced_test_dataset.csv")
-    #reduced_data = reduce_data(data, 15)
-    #create_csv("fullmesh_train_dataset.csv","Dataset/Train","DistanzeEuclidee2D",20,"fullmesh")
-    create_csv("fullmesh_test_dataset.csv","Dataset/Test","DistanzeEuclidee2D",20,"fullmesh")
+
+    '''create_csv("DistanzeEuclidee2D_20_fullmesh_spaced_train_dataset.csv","Dataset/Train","DistanzeEuclidee2D",20,"fullmesh_spaced")
+    create_csv("DistanzeEuclidee2D_20_fullmesh_spaced_test_dataset.csv","Dataset/Test","DistanzeEuclidee2D",20,"fullmesh_spaced")'''
+
+    '''create_csv("DistanzeEuclidee2D_20_twenty_spaced_train_dataset.csv","Dataset/Train","DistanzeEuclidee2D",20,"twenty_spaced")
+    create_csv("DistanzeEuclidee2D_20_twenty_spaced_test_dataset.csv","Dataset/Test","DistanzeEuclidee2D",20,"twenty_spaced")'''
+
+    '''create_csv("DistanzeEuclidee2D_20_fullmesh_train_dataset.csv","Dataset/Train","DistanzeEuclidee2D",20,"fullmesh")
+    create_csv("DistanzeEuclidee2D_20_fullmesh_test_dataset.csv","Dataset/Test","DistanzeEuclidee2D",20,"fullmesh")'''
+
+    '''create_csv("DistanzeEuclidee2D_20_twenty_train_dataset.csv","Dataset/Train","DistanzeEuclidee2D",20,"twenty")
+    create_csv("DistanzeEuclidee2D_20_twenty_test_dataset.csv","Dataset/Test","DistanzeEuclidee2D",20,"twenty")'''
+    
+    create_csv("DistanzeEuclidee2D_20_twenty_spaced_dynamic_train_dataset.csv","Dataset/Train","DistanzeEuclidee2D",20,"twenty_spaced_dynamic")
+    #create_csv("DistanzeEuclidee2D_20_twenty_spaced_dynamic_test_dataset.csv","Dataset/Test","DistanzeEuclidee2D",20,"twenty_spaced_dynamic")
+
+
+    
+
     
