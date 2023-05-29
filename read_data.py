@@ -10,6 +10,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import scale
 from tqdm import tqdm
 from scipy.spatial import Delaunay
+from collections import OrderedDict
+import itertools
 
 def create_hashmap_from_ugly_labels_to_numbers(list):
     hashmap = {}
@@ -314,7 +316,6 @@ def ottieni_features_delaunay(filename, num_frames):
 
     list_of_euclidean_distances = []
     
-    
     while ret:
         frame_distances = []
         landmarks = []
@@ -387,6 +388,64 @@ def ottieni_features_delaunay(filename, num_frames):
 
     return list_of_euclidean_distances
 
+def ottieni_features_fullmesh(filename,num_frames):
+    mp_face_mesh = mp.solutions.face_mesh
+    face_mesh = mp_face_mesh.FaceMesh()
+
+    cap = cv2.VideoCapture(filename)
+
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    cap.set(cv2.CAP_PROP_POS_FRAMES, total_frames - num_frames - 1)
+
+    ret, frame = cap.read()
+
+    list_of_euclidean_distances = []
+    
+    while ret:
+        landmarks = []
+
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        height, width, _ = frame.shape
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        results = face_mesh.process(rgb_frame)
+
+        iterator = iter(lp.lip_landmarks)
+        for j in range(0, len(lp.lip_landmarks)):
+            i = next(iterator)
+
+            if results and results.multi_face_landmarks:
+                # Primo elemento della tupla
+                point1 = results.multi_face_landmarks[0].landmark[i[0]]
+                node1_x = int(point1.x * width)
+                node1_y = int(point1.y * height)
+                landmarks.append((node1_x,node1_y))
+
+                # Secondo elemento della tupla
+                point2 = results.multi_face_landmarks[0].landmark[i[1]]
+                node2_x = int(point2.x * width)
+                node2_y = int(point2.y * height)
+                landmarks.append((node2_x,node2_y))
+
+        # landmarks senza duplicati
+        landmarks = list(OrderedDict.fromkeys(landmarks))
+
+        # considero tutte le combinazioni di punti
+        fullmesh = list(itertools.combinations(landmarks,2))
+
+        # calcolo la distanza per ogni coppia
+        for link in fullmesh:
+            point1, point2 = link
+            d = math.sqrt((point2[0] - point1[0]) ** 2 + (point2[1]- point1[1]) ** 2)
+            list_of_euclidean_distances.append(d)
+
+
+    return list_of_euclidean_distances           
+
+
 def create_csv(csv_filename, directory, type, num_frames, experiment):
     with open(csv_filename, mode='w', newline='') as file:
         writer = csv.writer(file)
@@ -397,7 +456,8 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
 
         if experiment == "delaunay":
             num_features = 29
-            num_features = 29
+        elif experiment == "fullmesh":
+            num_features = 153
         else:
             num_features = 20
         
@@ -417,6 +477,8 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
                     res = ottieni_features_delaunay(video, num_frames)
                 elif experiment == "spaced":
                     res = ottieni_features_spaced_da_video(video,type,num_frames)
+                elif experiment == "fullmesh":
+                    res = ottieni_features_fullmesh(video, num_frames)
                 else:
                     res = ottieni_features_da_video(video,type, num_frames)
                 video_label = str(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
@@ -433,5 +495,8 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
 if __name__ == "__main__":
     #create_csv("spaced_test_dataset.csv","Dataset/Test","DistanzeEuclidee2D",20,"spaced")
     #create_csv("spaced_train_dataset.csv","Dataset/Train","DistanzeEuclidee2D",20,"spaced")
-    data = create_data_correctly("spaced_train_dataset.csv","spaced_test_dataset.csv")
-    reduced_data = reduce_data(data, 15)
+    #data = create_data_correctly("spaced_train_dataset.csv","spaced_test_dataset.csv")
+    #reduced_data = reduce_data(data, 15)
+    #create_csv("fullmesh_train_dataset.csv","Dataset/Train","DistanzeEuclidee2D",20,"fullmesh")
+    create_csv("fullmesh_test_dataset.csv","Dataset/Test","DistanzeEuclidee2D",20,"fullmesh")
+    
