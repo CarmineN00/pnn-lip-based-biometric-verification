@@ -39,21 +39,19 @@ if __name__ == "__main__":
     
     file_rows = ""
 
-    for kernel in kernel_names:
-        for metrica in metriche:
-            for experiment in experiments:
-                csv_filename = metrica + "_" + str(num_frames) + "_" + experiment + "_"
-                test_csv_file = csv_filename + "test.csv"
-                train_csv_file = csv_filename + "train.csv"
-                
-                data = read_data.create_data_correctly(train_csv_file, test_csv_file)
-                predictions = p.PNN(data,kernel)
-
-                to_print = "Kernel: "+kernel+"\nMetric: "+metrica+"\nExperiment: "+experiment
-                scores = p.print_metrics(data['y_test_before_ohe'], predictions)
-                to_print+="\nAccuracy: "+str(scores["accuracy"])+"\nPrecision: "+str(scores["precision"])+"\nRecall: "+str(scores["recall"])+"\n\n"
-                print(to_print)
-                file_rows += to_print
-
     with open('results.txt', 'w') as file:
-        file.write(file_rows)
+        for kernel in kernel_names:
+            for metrica in metriche:
+                for experiment in experiments:
+                    csv_filename = metrica + "_" + str(num_frames) + "_" + experiment + "_"
+                    test_csv_file = csv_filename + "test.csv"
+                    train_csv_file = csv_filename + "train.csv"
+                    
+                    data = read_data.create_data_correctly(train_csv_file, test_csv_file)
+                    predictions = p.PNN(data,kernel)
+
+                    to_print = "Kernel: "+kernel+"\nMetric: "+metrica+"\nExperiment: "+experiment
+                    scores = p.print_metrics(data['y_test_before_ohe'], predictions)
+                    to_print+="\nAccuracy: "+str(scores["accuracy"])+"\nPrecision: "+str(scores["precision"])+"\nRecall: "+str(scores["recall"])+"\n\n"
+                    print(to_print)
+                    file.write(to_print)
