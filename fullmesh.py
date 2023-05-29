@@ -18,7 +18,7 @@ if __name__ == "__main__":
         print(train_csv_file, "già esiste")
 
     data = rd.create_data_correctly(train_csv_file, test_csv_file)
-    predictions = p.PNN(data,"epanechnikov")
+    predictions = p.PNN(data,"rbf")
 
     scores = p.print_metrics(data['y_test_before_ohe'], predictions)
     print("\nAccuracy: "+str(scores["accuracy"])+"\nPrecision: "+str(scores["precision"])+"\nRecall: "+str(scores["recall"])+"\n\n")
