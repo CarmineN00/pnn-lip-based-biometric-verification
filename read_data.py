@@ -4,6 +4,7 @@ import os, glob, cv2
 import math
 import mediapipe as mp
 import pandas
+import psutil
 import LipLandmarks as lp
 import LipLandmarksDynamic as lpd
 import csv
@@ -182,9 +183,6 @@ def print_stats(data):
     print("Shape of Y_TRAIN:", y_train_shape)
     print("Shape of Y_TEST:", y_test_shape)
     
-
-
-
 def ottieni_features_twenty_spaced_da_video(filename, type, num_frames):
     # Apri il video
     video = cv2.VideoCapture(filename)
@@ -276,7 +274,9 @@ def ottieni_features_twentytwo_spaced_da_video(filename, type, num_frames):
 
     while True:
         # Leggi il frame corrente
+        ##printMemoryUsage("Sono al frame"+str(frame_count))
         ret, frame = video.read()
+        ##printMemoryUsage("Sono al frame"+str(frame_count)+" dopo aver letto il frame")
 
         # Verifica se il frame è stato letto correttamente
         if not ret:
@@ -628,7 +628,96 @@ def ottieni_features_fullmesh(filename,num_frames):
 
     return list_of_euclidean_distances           
 
+    with open(csv_filename, mode='w', newline='') as file:
+        writer = csv.writer(file)
 
+        header_string = []
+
+        num_features = 0
+
+        if experiment == "delaunay":
+            num_features = 29
+        elif "fullmesh" in experiment:
+            num_features = 153
+        elif "twentytwo" in experiment:
+            num_features = 22
+        else:
+            num_features = 20
+
+        if "behavioural" in experiment:
+            num_features = num_features * num_frames
+
+        print("Creando un dataset con ",num_features," features")
+        
+        for i in range(num_features):
+            header_string.append("Feature " + str(i))
+        
+        if "behavioural" in experiment:
+            num_features = num_features / num_frames
+        
+        header_string.append("Label")
+        writer.writerow(header_string)
+        file.close()
+    
+
+    if os.path.isdir(directory):
+        files = glob.glob(directory + "/*.avi")
+        res = []
+
+        for video in tqdm(files, desc=directory, ncols=100):
+            #print("Nome video: ", video)
+            
+            #twenty = 20 feature per frame, gli ultimi n_frame del video
+            #twenty_dynamic = 22 feature per frame, gli ultimi n_frame del video
+
+            #twenty_spaced = 20 feature per frame, n_frame a video presi a intervalli regolari
+            #twenty_spaced_dynamic = 22 feature per frame, n_frame a video presi a intervalli regolari
+
+            #twenty_spaced_behavioural = 20 feature per frame, n_frame a video presi a intervalli regolari, RIGHE CONCATENATE
+            #twenty_spaced_dynamic_behavioural = 22 feature per frame, n_frame a video presi a intervalli regolari, RIGHE CONCATENATE
+
+            #full_mesh = 153 feature per frame, gli ultimi n_frame del video
+
+            #full_mesh_spaced = 153 feature per frame, n_frame a video presi a intervalli regolari
+            #printMemoryUsage("Appena caricato il video")
+            if experiment == "delaunay":
+                res = ottieni_features_delaunay(video, num_frames)
+            elif experiment == "twenty":
+                res = ottieni_features_twenty_da_video(video, type, num_frames)
+            elif experiment == "twentytwo":
+                res = ottieni_features_twentytwo_da_video(video, type, num_frames)
+            elif experiment == "twenty_spaced":
+                res = ottieni_features_twenty_spaced_da_video(video,type,num_frames)
+            elif experiment == "twentytwo_spaced":
+                res = ottieni_features_twentytwo_spaced_da_video(video,type,num_frames)
+            elif experiment == "twenty_spaced_behavioural":
+                res = ottieni_features_twenty_spaced_da_video(video,type,num_frames)
+            elif experiment == "twentytwo_spaced_behavioural":
+                res = ottieni_features_twentytwo_spaced_da_video(video,type,num_frames)
+            elif experiment == "fullmesh":
+                res = ottieni_features_fullmesh(video,num_frames)
+            elif experiment == "fullmesh_spaced":
+                res = ottieni_features_fullmesh_spaced(video,type, num_frames)
+            #printMemoryUsage("Appena misurato il video")
+
+            video_label = str(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
+
+            print("\nShape of res: ",np.shape(res))
+            if np.shape(res)[0] == num_features * num_frames:
+                print("Per il video : ",video," sto inserendo: ",np.shape(res)[0])
+                with open(csv_filename, mode='a', newline='') as file:
+                    writer = csv.writer(file)
+                    if "behavioural" in experiment:
+                        writer.writerow(np.append(res,video_label))
+                    else:
+                        res_split = np.array_split(res, num_frames)
+                        for i in range(num_frames):
+                            info_row = res_split[i]
+                            writer.writerow(np.append(info_row, video_label))
+                    file.close()
+            #printMemoryUsage("Appena scritto nel file")
+            else:
+                    print("Non è stato possibile prelevare le features dal video:",video)
 
 def create_csv(csv_filename, directory, type, num_frames, experiment):
     with open(csv_filename, mode='w', newline='') as file:
@@ -702,8 +791,10 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
 
                 video_label = str(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
 
+                #print("Shape of res:",np.shape(res))
+
                 if np.shape(res)[0] == num_features * num_frames:
-                    print("Per il video : ",video," sto inserendo: ",np.shape(res)[0])
+                    #print("Per il video : ",video," sto inserendo: ",np.shape(res)[0])
                     if "behavioural" in experiment:
                         writer.writerow(np.append(res,video_label))
                     else:
@@ -711,19 +802,25 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
                         for i in range(num_frames):
                             info_row = res_split[i]
                             writer.writerow(np.append(info_row, video_label))
-                else:
-                    print("Non è stato possibile prelevare le features dal video:",video)
+                '''else:
+                    print("Non è stato possibile prelevare le features dal video:",video)'''
+
+def printMemoryUsage(message):
+    pid = os.getpid()
+    # Ottenere le informazioni sulla memoria del processo
+    process = psutil.Process(pid)
+    memory_info = process.memory_info()
+
+    # Ottenere la quantità di memoria RAM utilizzata dal processo in bytes
+    memory_usage = memory_info.rss
+
+    # Convertire la quantità di memoria utilizzata in una forma leggibile
+    formatted_memory_usage = psutil._common.bytes2human(memory_usage)
+
+    print("Memoria (",message,")",formatted_memory_usage)
 
 if __name__ == "__main__":
-
-    #Quando i frame prelevati sono tutti i frame del video, chiamare la metodologia "spaced" preleverà 300 frame da un video di 300 frame, pertanto
-    #l'intervallo di prelievo sarà un frame ogni 1 frame, pertanto tutti i frame
-    
-    '''create_csv("DistanzeEuclidee2D_300_twenty_behavioural_train_dataset.csv","Dataset/Train","DistanzeEuclidee2D",300,"twenty_spaced_behavioural")
-    create_csv("DistanzeEuclidee2D_300_twenty_behavioural_test_dataset.csv","Dataset/Test","DistanzeEuclidee2D",300,"twenty_spaced_behavioural")'''
-
-    create_csv("DistanzeEuclidee2D_300_twentytwo_behavioural_train_dataset.csv","Dataset/Train","DistanzeEuclidee2D",300,"twentytwo_spaced_behavioural")
-    create_csv("DistanzeEuclidee2D_300_twentytwo_behavioural_test_dataset.csv","Dataset/Test","DistanzeEuclidee2D",300,"twentytwo_spaced_behavioural")
+    print("Per usare read_data, chiama i suoi metodi da un tester")
     
 
 

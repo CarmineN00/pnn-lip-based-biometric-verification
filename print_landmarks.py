@@ -9,13 +9,14 @@ from collections import OrderedDict
 import itertools
 
 
-def p_landmarks(image_path,type):
+def p_landmarks(image_path, image, type):
     landmarks = []
 
     mp_face_mesh = mp.solutions.face_mesh
     face_mesh = mp_face_mesh.FaceMesh()
 
-    image = cv2.imread(image_path)
+    if image is None:
+        image = cv2.imread(image_path)
     height, width, _ = image.shape
 
     results = face_mesh.process(image)
@@ -44,7 +45,8 @@ def p_landmarks(image_path,type):
                 cv2.line(image, (node1_x, node1_y), (node2_x,node2_y), (255, 255, 255), 1)
 
     if(type=="standard"):
-        cv2.imwrite("standard_landmarks.jpg", image)
+        #cv2.imwrite("standard_landmarks.jpg", image)
+        return image
     elif(type=="delaunay"):
         landmarks = set(landmarks)
         landmarks = list(landmarks)
@@ -79,7 +81,8 @@ def p_landmarks(image_path,type):
                 cv2.circle(image,(pt3[0],pt3[1]), 2, (255, 0, 0), -1)
                 cv2.line(image, tuple(pt3), tuple(pt1), (255, 255, 255), 1)
 
-        cv2.imwrite("delaunay_landmarks.jpg", image)
+        #cv2.imwrite("delaunay_landmarks.jpg", image)
+        return image
     elif type == "fullmesh":
         landmarks = list(OrderedDict.fromkeys(landmarks))
 
@@ -91,13 +94,15 @@ def p_landmarks(image_path,type):
             cv2.circle(image,(point2[0],point2[1]), 2, (255, 0, 0), -1)
             cv2.line(image, point1, point2, (255, 255, 255), 1)
         
-        cv2.imwrite("fullmesh_landmarks.jpg", image)
+        #cv2.imwrite("fullmesh_landmarks.jpg", image)
+        return image
 
-def p_dynamic_landmarks(image_path):
+def p_dynamic_landmarks(image_path, image):
     mp_face_mesh = mp.solutions.face_mesh
     face_mesh = mp_face_mesh.FaceMesh()
 
-    image = cv2.imread(image_path)
+    if image is None:
+        image = cv2.imread(image_path)
     height, width, _ = image.shape
 
     results = face_mesh.process(image)
@@ -119,7 +124,8 @@ def p_dynamic_landmarks(image_path):
             cv2.circle(image, (node2_x, node2_y), 2, (255, 0, 0), -1)
             cv2.line(image, (node1_x, node1_y), (node2_x,node2_y), (255, 255, 255), 1)
 
-        cv2.imwrite("standard_dynamic_landmarks.jpg", image)
+        #cv2.imwrite("standard_dynamic_landmarks.jpg", image)
+    return image
 
 if __name__ == "__main__":
     path = "assets\Mike.jpg"
