@@ -12,10 +12,13 @@ def putFrameCounter(frame,counter):
     return frame
 
 if __name__ == "__main__":
-    videopath = "Dataset\\Test\\4_1_2_18_25_4.avi"
+    videopath = "Dataset\\Train\\3_1_1_6_25_1.avi"
 
     video_label = str(''.join(videopath.split("\\")[1].split(".")[0].split("_")[:4]))
     result_name = videopath.split("\\")[2].split(".")[0]
+
+    #result_name = videopath.split("\\")[4].split("_")[0]
+
     print(result_name)
 
     # Apri il video
@@ -36,8 +39,8 @@ if __name__ == "__main__":
         # Se il frame viene letto correttamente
         if ret:
             # Fai qualcosa con il frame, ad esempio mostralo a schermo
-            #frame_result = pl.p_landmarks("",frame,"fullmesh")
-            frame_result = pl.p_dynamic_landmarks("",frame,)
+            #frame_result = pl.p_landmarks("",frame,"standard")
+            frame_result = pl.p_dynamic_landmarks("",frame)
             if counter == 20:
                 cv2.imwrite(result_name+"_result.jpg", frame_result)
             frame_result = putFrameCounter(frame_result,counter)

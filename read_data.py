@@ -7,6 +7,7 @@ import pandas
 import psutil
 import LipLandmarks as lp
 import LipLandmarksDynamic as lpd
+import LipLandmarksFullMesh as lpfm
 import csv
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import scale
@@ -14,6 +15,7 @@ from tqdm import tqdm
 from scipy.spatial import Delaunay
 from collections import OrderedDict
 import itertools
+import matplotlib.pyplot as plt
 
 def create_hashmap_from_ugly_labels_to_numbers(list):
     hashmap = {}
@@ -508,7 +510,7 @@ def ottieni_features_delaunay(filename, num_frames):
 
     return list_of_euclidean_distances
 
-def ottieni_features_fullmesh_spaced(filename,num_frames):
+def OLD_ottieni_features_fullmesh_spaced(filename,num_frames):
     mp_face_mesh = mp.solutions.face_mesh
     face_mesh = mp_face_mesh.FaceMesh()
 
@@ -517,6 +519,8 @@ def ottieni_features_fullmesh_spaced(filename,num_frames):
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     frame_interval = np.floor(total_frames/num_frames)
+
+    print("Frame interval:",frame_interval)
 
     ret, frame = cap.read()
 
@@ -548,27 +552,107 @@ def ottieni_features_fullmesh_spaced(filename,num_frames):
                     node1_x = int(point1.x * width)
                     node1_y = int(point1.y * height)
                     landmarks.append((node1_x,node1_y))
+                    cv2.circle(rgb_frame, (node1_x, node1_y), 1, (255, 255, 255), -1)
 
                     # Secondo elemento della tupla
                     point2 = results.multi_face_landmarks[0].landmark[i[1]]
                     node2_x = int(point2.x * width)
                     node2_y = int(point2.y * height)
                     landmarks.append((node2_x,node2_y))
+                    cv2.circle(rgb_frame, (node1_x, node1_y), 1, (255, 255, 255), -1)
 
+            
             # landmarks senza duplicati
             landmarks = list(OrderedDict.fromkeys(landmarks))
+            print("Shape of landmarks:",np.shape(landmarks))
+            if np.shape(landmarks)[0]!=18:
+                plt.imshow(rgb_frame)
+                plt.axis('off')  # Opzionale: per nascondere gli assi
+                plt.show()
 
             # considero tutte le combinazioni di punti
             fullmesh = list(itertools.combinations(landmarks,2))
 
+            last_shape = np.shape(list_of_euclidean_distances)
             # calcolo la distanza per ogni coppia
             for link in fullmesh:
                 point1, point2 = link
                 d = math.sqrt((point2[0] - point1[0]) ** 2 + (point2[1]- point1[1]) ** 2)
                 list_of_euclidean_distances.append(d)
+
+            print("For frame",frame_count,": the vector of distances is updated, inserted = ",np.shape(list_of_euclidean_distances)[0]-last_shape[0])
         
         frame_count += 1
 
+    return list_of_euclidean_distances
+
+def ottieni_features_fullmesh_spaced_da_video(filename, type, num_frames):
+    # Apri il video
+    video = cv2.VideoCapture(filename)
+
+    mp_face_mesh = mp.solutions.face_mesh
+    face_mesh = mp_face_mesh.FaceMesh()
+
+    total_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    frame_interval = np.floor(total_frames/num_frames)
+
+    # Verifica se il video è stato aperto correttamente
+    if not video.isOpened():
+        print("Impossibile aprire il video")
+        return
+
+    # Inizializza variabili
+    frame_count = 0
+
+    list_of_euclidean_distances = []
+
+    while True:
+        # Leggi il frame corrente
+        ret, frame = video.read()
+
+        # Verifica se il frame è stato letto correttamente
+        if not ret:
+            break
+
+        # Mostra il frame solo se è un frame selezionato
+        if frame_count % frame_interval == 0:
+            height, width, _ = frame.shape
+            rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            results = face_mesh.process(rgb_frame)
+            #last_shape = np.shape(list_of_euclidean_distances)
+
+            iterator = iter(lpfm.lip_landmarks)
+            for j in range(0, len(lpfm.lip_landmarks)):
+                i = next(iterator)
+
+                if results and results.multi_face_landmarks:
+                    # Primo elemento della tupla
+                    point1 = results.multi_face_landmarks[0].landmark[i[0]]
+                    node1_x = int(point1.x * width)
+                    node1_y = int(point1.y * height)
+
+                    # Secondo elemento della tupla
+                    point2 = results.multi_face_landmarks[0].landmark[i[1]]
+                    node2_x = int(point2.x * width)
+                    node2_y = int(point2.y * height)
+
+                    # Calcolo della distanza euclidea tra i punti
+                    if (type == "DistanzeEuclidee2D"):
+                        d = math.sqrt((node2_x - node1_x) ** 2 + (node2_y - node1_y) ** 2)
+                    elif (type == "DistanzeEuclideeNormalizzate2D"):
+                        d = math.sqrt((point2.x - point1.y) ** 2 + (point2.y - point1.y) ** 2)
+                    elif (type == "CityBlock3D"):
+                        d = abs(point1.x - point2.x) + abs(point1.y - point2.y) + abs(point1.z - point2.z)
+
+                    list_of_euclidean_distances.append(d)
+            
+        #print(np.shape(list_of_euclidean_distances)[0]-last_shape[0],"segments were added at frame",frame_count)
+        frame_count += 1
+    #print("Final shape:",np.shape(list_of_euclidean_distances))
+    # Rilascia le risorse
+    video.release()
     return list_of_euclidean_distances
 
 def ottieni_features_fullmesh(filename,num_frames):
@@ -739,7 +823,7 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
         if "behavioural" in experiment:
             num_features = num_features * num_frames
 
-        print("Creando un dataset con ",num_features," features")
+        #print("Creando un dataset con ",num_features," features")
         
         for i in range(num_features):
             header_string.append("Feature " + str(i))
@@ -750,25 +834,24 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
         header_string.append("Label")
         writer.writerow(header_string)
 
+        failed_videos = 0
+
         if os.path.isdir(directory):
             files = glob.glob(directory + "/*.avi")
 
             for video in tqdm(files, desc=directory, ncols=100):
-                #print("Nome video: ", video)
+                print("\nNome video: ", video)
                 res = []
 
                 #twenty = 20 feature per frame, gli ultimi n_frame del video
                 #twenty_dynamic = 22 feature per frame, gli ultimi n_frame del video
 
                 #twenty_spaced = 20 feature per frame, n_frame a video presi a intervalli regolari
-                #twenty_spaced_dynamic = 22 feature per frame, n_frame a video presi a intervalli regolari
-
-                #twenty_spaced_behavioural = 20 feature per frame, n_frame a video presi a intervalli regolari, RIGHE CONCATENATE
-                #twenty_spaced_dynamic_behavioural = 22 feature per frame, n_frame a video presi a intervalli regolari, RIGHE CONCATENATE
+                #twentytwo_spaced = 22 feature per frame, n_frame a video presi a intervalli regolari
 
                 #full_mesh = 153 feature per frame, gli ultimi n_frame del video
-
                 #full_mesh_spaced = 153 feature per frame, n_frame a video presi a intervalli regolari
+                #full_spaced_behavioural = 153 features per frame, n frame a video presi a intervalli regolari, RIGHE CONCATENATE
 
                 if experiment == "delaunay":
                     res = ottieni_features_delaunay(video, num_frames)
@@ -786,15 +869,19 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
                     res = ottieni_features_twentytwo_spaced_da_video(video,type,num_frames)
                 elif experiment == "fullmesh":
                     res = ottieni_features_fullmesh(video,num_frames)
+                elif experiment == "fullmesh_behavioural":
+                    res = ottieni_features_fullmesh(video,num_frames)
                 elif experiment == "fullmesh_spaced":
-                    res = ottieni_features_fullmesh_spaced(video,type, num_frames)
+                    res = ottieni_features_fullmesh_spaced_da_video(video,type,num_frames)
+                elif experiment == "fullmesh_spaced_behavioural":
+                    res = ottieni_features_fullmesh_spaced_da_video(video,type,num_frames)
 
                 video_label = str(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
 
-                #print("Shape of res:",np.shape(res))
+                print("Shape of res:",np.shape(res))
 
                 if np.shape(res)[0] == num_features * num_frames:
-                    #print("Per il video : ",video," sto inserendo: ",np.shape(res)[0])
+                    print("Per il video : ",video," sto inserendo: ",np.shape(res)[0])
                     if "behavioural" in experiment:
                         writer.writerow(np.append(res,video_label))
                     else:
@@ -802,8 +889,9 @@ def create_csv(csv_filename, directory, type, num_frames, experiment):
                         for i in range(num_frames):
                             info_row = res_split[i]
                             writer.writerow(np.append(info_row, video_label))
-                '''else:
-                    print("Non è stato possibile prelevare le features dal video:",video)'''
+                else:
+                    failed_videos = failed_videos + 1
+                    print("Failed videos:",failed_videos)
 
 def printMemoryUsage(message):
     pid = os.getpid()

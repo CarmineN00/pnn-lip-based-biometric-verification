@@ -20,6 +20,8 @@ import random
 import pnn as p
 
 def create_csv(csv_filename,directory,type,main_label,frames_for_main,frames_for_others):
+    main_counter = 0
+    other_counter = 0
     with open(csv_filename, mode='w', newline='') as file:
         writer = csv.writer(file)
 
@@ -54,8 +56,12 @@ def create_csv(csv_filename,directory,type,main_label,frames_for_main,frames_for
                       for elem in res_split:
                             if video_label == main_label:
                                 writer.writerow(np.append(elem, "1"))
+                                main_counter = main_counter + 1
                             else:
                                 writer.writerow(np.append(elem, "0"))
+                                other_counter = other_counter + 1
+    '''print("Sono state prelevate",main_counter,"righe per il soggetto",main_label)
+    print("Sono state prelevate",other_counter,"righe per gli altri soggetti")'''
 
 def ottieni_features_da_video(filename,type,num_frames):
 
@@ -186,7 +192,7 @@ num_people = len(unique_labels)
 #print("Ci sono",num_people,"persone differenti nel Dataset!")
 
 #Variabili indipendenti
-proportion = (0.4,0.6)
+proportion = (0.2,0.8)
 num_frames_of_main_subject = 1200
 
 #Variabili dipendenti
@@ -221,11 +227,11 @@ metriche = ["DistanzeEuclidee2D", "DistanzeEuclideeNormalizzate2D", "CityBlock3D
 
 csv_filename_test = "VERIFY_"+metriche[0]+"_"+label_main_subject+"_test.csv"
 create_csv(csv_filename_test,"Dataset/Test",metriche[0],label_main_subject,frames_for_test_video_of_main_subject,frames_for_test_video_of_other_subject)
-print(csv_filename_test," creato con successo!")
+#print(csv_filename_test," creato con successo!")
 
 csv_filename_train = "VERIFY_"+metriche[0]+"_"+label_main_subject+"_train.csv"
 create_csv(csv_filename_train,"Dataset/Train",metriche[0],label_main_subject,frames_for_train_video_of_main_subject,frames_for_train_video_of_other_subject)
-print(csv_filename_train," creato con successo!")
+#print(csv_filename_train," creato con successo!")
 
 data = rd.create_data_correctly(csv_filename_train,csv_filename_test)
 

@@ -3,10 +3,8 @@ import pnn as p
 import os
 
 if __name__ == "__main__":
-    
-    columns = 15
 
-    test_csv_file = "spaced_test_dataset.csv"
+    '''test_csv_file = "spaced_test_dataset.csv"
     if not os.path.exists(test_csv_file):
         rd.create_csv(test_csv_file, "Dataset/Test", "DistanzeEuclidee2D", 20, "spaced")
     else:
@@ -16,13 +14,16 @@ if __name__ == "__main__":
     if not os.path.exists(train_csv_file):
         rd.create_csv(train_csv_file, "Dataset/Train", "DistanzeEuclidee2D", 20, "spaced")
     else:
-        print(train_csv_file, "già esiste")
+        print(train_csv_file, "già esiste")'''
+    
+    train_csv_file = "datasets\spaced_train_dataset.csv"
+    test_csv_file = "datasets\spaced_test_dataset.csv"
 
     for columns in range(5, 21):
 
         print("Testing only using",columns,"columns")
     
-        data = rd.create_data_correctly("spaced_train_dataset.csv","spaced_test_dataset.csv")
+        data = rd.create_data_correctly(train_csv_file,test_csv_file)
 
         '''print("Printing stats for data!")
         rd.print_stats(data)

@@ -26,12 +26,12 @@ def create_csv(csv_filename, directory):
             files = glob.glob(directory + "/*.avi")
 
             for video in tqdm(files, desc=directory, ncols=100):
-                res = get_svd_features(video)
+                res = get_features(video)
                 video_label = str(''.join(video.split("\\")[1].split(".")[0].split("_")[:4]))
                 row = np.append(res,video_label)
                 writer.writerow(row)
 
-def get_svd_features(video_path):
+def get_features(video_path):
     vidcap = cv2.VideoCapture(video_path)
 
     # Imposta i parametri per la codifica sparsa
@@ -78,11 +78,10 @@ if __name__ == '__main__':
 
     #Uncomment these lines to create the dataset, leave them commented if dataset already exists
 
-    #create_csv("svd_test.csv","Lips/Test")
-    #create_csv("svd_train.csv","Lips/Train")
+    create_csv("svd_test.csv","Lips/Test")
+    create_csv("svd_train.csv","Lips/Train")
     data = rd.create_data_correctly("svd_train.csv","svd_test.csv")
     predictions = p.PNN(data, "rbf")
     scores = p.print_metrics(data['y_test_before_ohe'], predictions)
     print("\nAccuracy: "+str(scores["accuracy"])+"\nPrecision: "+str(scores["precision"])+"\nRecall: "+str(scores["recall"])+"\n\n")
     
-

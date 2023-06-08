@@ -37,16 +37,16 @@ def create_csv(csv_filename, directory, trainTestToggle):
                 
                 if trainTestToggle:
                     if howmanyvideosfrom[video_label]<=8:
-                        res = get_svd_features(video)
+                        res = get_features(video)
                         row = np.append(res,video_label)
                         writer.writerow(row)
                 else:
                     if howmanyvideosfrom[video_label]>8:
-                        res = get_svd_features(video)
+                        res = get_features(video)
                         row = np.append(res,video_label)
                         writer.writerow(row)
 
-def get_svd_features(video_path):
+def get_features(video_path):
     vidcap = cv2.VideoCapture(video_path)
 
     # Imposta i parametri per la codifica sparsa
@@ -97,7 +97,6 @@ if __name__ == '__main__':
 
     train_csv_file = "vidtim_svd_train.csv"
     test_csv_file = "vidtim_svd_test.csv"
-    
 
     if not os.path.isfile(train_csv_file):
         create_csv(train_csv_file,"VidTimit-Video-m",True)
@@ -108,13 +107,6 @@ if __name__ == '__main__':
     data = rd.create_data_correctly(train_csv_file,test_csv_file)
 
     predictions = p.PNN(data, "rbf")
-    
-    '''print("Lenght of DATA Y TEST BEFORE OHE: ",len(data['y_test_before_ohe']))
-    for elem in data['y_test_before_ohe']:
-        print("Elem: '",elem,"' of type", type(elem))
-    print("Lenght of PREDICTIONS: ",len(predictions))
-    for elem in predictions:
-        print("Elem: '",elem,"' of type", type(elem))'''
 
     evaluation_ready_ground_truth = np.array(data['y_test_before_ohe'], dtype=np.int64)
 

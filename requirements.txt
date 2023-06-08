@@ -13,3 +13,4 @@ seaborn~=0.12.2
 scikit-learn~=1.0.2
 delaunay~=1.0.3
 psutil==5.9.0
+plyer==2.1.0
